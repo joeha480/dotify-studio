@@ -46,6 +46,7 @@ import com.googlecode.e2u.Start;
 import com.googlecode.e2u.StartupDetails;
 import com.googlecode.e2u.StartupDetails.Mode;
 
+import application.MainController;
 import application.l10n.Messages;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
@@ -377,6 +378,11 @@ public class PreviewController extends BorderPane implements Editor {
 	public void closing() {
 		closing = true;
 		if (start!=null) {
+			start.getMainPage().getBookReaderResult()
+				.map(book->new File(book.getURI()))
+				.ifPresent(file-> {
+					Settings.getSettings().addToRecent(file.getAbsolutePath());
+				});
 			start.stopServer();
 		}
 	}

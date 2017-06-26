@@ -1,11 +1,22 @@
 package shared;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.List;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
 
 /**
  * Provides a store for settings.
@@ -19,6 +30,8 @@ public class Settings {
 	 */
 	private final static String PREFS_VERSION = "1";
     private Preferences p;
+    private final File recentFile;
+    private final Deque<File> recents;
     private static Settings settings;
 	
     /**
@@ -42,9 +55,11 @@ public class Settings {
 					}
 				} catch (BackingStoreException e) { 	}
         	}
-        	// Update the version of the application used to write this
+        	// Update the version of the shared used to write this
         	p.put(Keys.version.toString(), BuildInfo.VERSION);
         }
+        recentFile = getRecentFile();
+        recents = new ArrayDeque<>(getRecent(recentFile));
     }
     
     /**
@@ -179,6 +194,69 @@ public class Settings {
 			return true;
 		}
 	}
+	
+	static synchronized File getRecentFile() {
+		String userHome = System.getProperty("user.home");
+		if (userHome==null) {
+			// failed to get user home
+			return null;
+		}
+		File dotifyStorePath = new File(new File(userHome), ".dotify-studio");
+		if (!dotifyStorePath.isDirectory() && !dotifyStorePath.mkdirs()) {
+			// failed to create folder
+			return null;
+		}
+		return new File(dotifyStorePath, "recent");
+	}
+	
+	public synchronized Collection<File> getRecent() {
+		return recents;
+	}
+	    
+	static synchronized List<File> getRecent(File recentFile) {
+    	try {
+    		List<String> recentPaths = Files.readAllLines(recentFile.toPath());
+    		// deleting the file because we will write a cleaned up version later
+    		boolean deleted = recentFile.delete();
+    		// reversing is done to preserve the last occurrence instead of the first (when cleaning the stream below)
+    		Collections.reverse(recentPaths);
+			List<File> cleanedPaths = recentPaths.stream()
+					.map(a -> new File(a))
+					.filter(a -> a.exists())
+					.distinct()
+					.collect(Collectors.toList());
+			if (deleted) {
+				// reversing again to get the items in the correct order for the file
+				List<File> writePaths = new ArrayList<>(cleanedPaths);
+				Collections.reverse(writePaths);
+				Files.write(recentFile.toPath(),
+						writePaths.stream()
+						.map(a -> a.getAbsolutePath())
+						.limit(20)
+						.collect(Collectors.toList()),
+						StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+			}
+			return cleanedPaths;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+    }
+	
+	public synchronized void addToRecent(String path) {
+		addToRecent(recentFile, path);
+		recents.push(new File(path));
+	}
+
+    static synchronized void addToRecent(File recentFile, String path) {
+    	try {
+			Files.write(recentFile.toPath(), Arrays.asList(new String[]{path}), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+    }
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
