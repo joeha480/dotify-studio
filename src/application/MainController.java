@@ -125,6 +125,7 @@ public class MainController {
 	private BooleanProperty canSave;
 	private BooleanProperty canToggleView;
 	private StringProperty urlProperty;
+	private KeysPressed pressed;
 	static final KeyCombination CTRL_F4 = new KeyCodeCombination(KeyCode.F4, KeyCombination.CONTROL_DOWN);
 
 	@FXML void initialize() {
@@ -176,6 +177,8 @@ public class MainController {
 			event.setDropCompleted(success);
 			event.consume();
 		});
+		
+		pressed = new KeysPressed(root, c -> System.out.println(c));
 
 		clearConsole();
 		
