@@ -3,16 +3,12 @@ package application;
 import java.awt.Desktop;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,31 +21,32 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
-
-import org.daisy.braille.utils.api.embosser.Embosser;
-import org.daisy.braille.utils.api.embosser.EmbosserCatalogService;
-import org.daisy.braille.utils.api.embosser.EmbosserFeatures;
-import org.daisy.braille.utils.api.embosser.EmbosserWriter;
-import org.daisy.braille.utils.api.embosser.EmbosserCatalog;
 import org.daisy.braille.utils.api.table.TableCatalog;
-import org.daisy.braille.utils.pef.PEFHandler;
 import org.daisy.braille.utils.pef.TextConverterFacade;
+import org.daisy.dotify.api.tasks.AnnotatedFile;
+import org.daisy.dotify.consumer.identity.IdentityProvider;
 import org.daisy.dotify.consumer.tasks.TaskGroupFactoryMaker;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
+
+import com.googlecode.e2u.StartupDetails;
+import com.googlecode.e2u.StartupDetails.Mode;
 
 import application.about.AboutView;
 import application.imports.ImportBrailleView;
 import application.l10n.Messages;
 import application.prefs.PreferencesView;
+import application.preview.Preview;
 import application.preview.PreviewController;
+import application.preview.SourcePreviewController;
 import application.search.SearchController;
 import application.template.TemplateView;
 import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -81,8 +78,6 @@ import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.Window;
-import shared.Settings;
-import shared.Settings.Keys;
 
 /**
  * Provides the controller for the main view.
@@ -102,6 +97,7 @@ public class MainController {
 	@FXML private ScrollPane consoleScroll;
 	@FXML private MenuItem closeMenuItem;
 	@FXML private MenuItem exportMenuItem;
+	@FXML private MenuItem saveMenuItem;
 	@FXML private MenuItem saveAsMenuItem;
 	@FXML private MenuItem refreshMenuItem;
 	@FXML private MenuItem openInBrowserMenuItem;
@@ -114,6 +110,10 @@ public class MainController {
 	private Tab helpTab;
 	private ExecutorService exeService;
 	private double[] verticalDividerPositions;
+	private BooleanProperty canEmboss;
+	private BooleanProperty canExport;
+	private BooleanProperty canSave;
+	private StringProperty urlProperty;
 	static final KeyCombination CTRL_F4 = new KeyCodeCombination(KeyCode.F4, KeyCombination.CONTROL_DOWN);
 
 	@FXML void initialize() {
@@ -175,21 +175,44 @@ public class MainController {
 		} catch (SecurityException | IOException e) {
 			e.printStackTrace();
 		}
+		canEmboss = new SimpleBooleanProperty();
+		canExport = new SimpleBooleanProperty();
+		canSave = new SimpleBooleanProperty();
+		urlProperty = new SimpleStringProperty();
 		//add menu bindings
 		setMenuBindings();
 	}
 	
 	private void setMenuBindings() {
+		tabPane.getSelectionModel().selectedItemProperty().addListener((o, ov, nv)->{
+			canEmboss.unbind();
+			canExport.unbind();
+			canSave.unbind();
+			urlProperty.unbind();
+			if (nv!=null && nv.getContent() instanceof Preview) {
+				Preview p = ((Preview)nv.getContent());
+				canEmboss.bind(p.canEmbossProperty());
+				canExport.bind(p.canExportProperty());
+				canSave.bind(p.canSaveProperty());
+				urlProperty.bind(p.urlProperty());
+			} else {
+				canEmboss.set(false);
+				canExport.set(false);
+				canSave.set(false);
+				urlProperty.set(null);
+			}
+		});
 		BooleanBinding noTabBinding = tabPane.getSelectionModel().selectedItemProperty().isNull();
 		BooleanBinding noTabExceptHelpBinding = noTabBinding.or(
 				tabPane.getSelectionModel().selectedItemProperty().isEqualTo(helpTab)
 		);
 		closeMenuItem.disableProperty().bind(noTabBinding);
-		exportMenuItem.disableProperty().bind(noTabExceptHelpBinding);
+		exportMenuItem.disableProperty().bind(noTabExceptHelpBinding.or(canExport.not()));
+		saveMenuItem.disableProperty().bind(noTabExceptHelpBinding.or(canSave.not()));
 		saveAsMenuItem.disableProperty().bind(noTabExceptHelpBinding);
 		refreshMenuItem.disableProperty().bind(noTabBinding);
-		openInBrowserMenuItem.disableProperty().bind(noTabBinding);
-		embossMenuItem.disableProperty().bind(noTabExceptHelpBinding);
+		openInBrowserMenuItem.disableProperty().bind(noTabBinding.or(urlProperty.isNull()));
+		embossMenuItem.disableProperty().bind(noTabExceptHelpBinding.or(canEmboss.not()));
 	}
 	
 	private static boolean canDropFiles(List<File> files) {
@@ -244,7 +267,7 @@ public class MainController {
 			Platform.runLater(()->{
 				synchronized (console) {
 					Document doc = console.getEngine().getDocument();
-					Node body = doc.getElementsByTagName("body").item(0);
+					org.w3c.dom.Node body = doc.getElementsByTagName("body").item(0);
 					Element p = doc.createElement("p");
 					p.setAttribute("class", name);
 					p.appendChild(doc.createTextNode(s));
@@ -271,14 +294,29 @@ public class MainController {
 		}
 	}
 	
-	void openArgs(String[] args) {
-        if (args.length>0) {
+	void openArgs(StartupDetails args) {
+        if (args.getMode()!=Mode.UNDEFINED) {
         	String title = null;
-        	if (args.length>=2 && "-open".equals(args[0])) {
-        		title = new File(args[1]).getName();
+        	if (args.getMode()==Mode.OPEN) {
+        		title = args.getFile().getName();
         	}
         	addTab(title, args);
         }
+	}
+	
+	private Optional<Preview> getSelectedPreview() {
+		return Optional.ofNullable(tabPane.getSelectionModel().getSelectedItem())
+				.map(t->t.getContent())
+				.filter(n->(n instanceof Preview))
+				.map(n->(Preview)n);
+	}
+	
+	@FXML void nextView() {
+		getSelectedPreview().ifPresent(p->p.changeView());
+	}
+	
+	@FXML void previousView() {
+		
 	}
 
     @FXML void refresh() {
@@ -287,8 +325,8 @@ public class MainController {
 			javafx.scene.Node node = t.getContent();
 			if (node instanceof WebView) {
 				((WebView) node).getEngine().reload();
-			} else if (node instanceof PreviewController) {
-				((PreviewController)node).reload();
+			} else if (node instanceof Preview) {
+				((Preview)node).reload();
 			}
 		}
     }
@@ -301,8 +339,14 @@ public class MainController {
 					javafx.scene.Node node = t.getContent();
 					if (node instanceof WebView) {
 						Desktop.getDesktop().browse(new URI(((WebView) node).getEngine().getLocation()));
-					} else if (node instanceof PreviewController) {
-						Desktop.getDesktop().browse(new URI(((PreviewController)t.getContent()).getURL()));
+					} else if (node instanceof Preview) {
+						((Preview)t.getContent()).getURL().ifPresent(url->{
+							try {
+								Desktop.getDesktop().browse(new URI(url));
+							} catch (IOException | URISyntaxException e) {
+								// fail silently
+							}
+						});
 					}
 				}				
 			} catch (IOException | URISyntaxException e) {
@@ -313,10 +357,12 @@ public class MainController {
     @FXML void emboss() {
     	Tab t = tabPane.getSelectionModel().getSelectedItem();
 		if (t!=null) {
-			Platform.runLater(()->{
-				PreviewController controller = ((PreviewController)t.getContent());
-				controller.showEmbossDialog();
-			});
+			Preview controller = ((Preview)t.getContent());
+			if (controller.canEmboss()) {
+				Platform.runLater(()->{
+					controller.showEmbossDialog();
+				});
+			}
 		}
     }
     
@@ -327,35 +373,37 @@ public class MainController {
 		}
     }
     
+    @FXML void save() {
+    	Tab t = tabPane.getSelectionModel().getSelectedItem();
+		if (t!=null) {
+			Preview controller = ((Preview)t.getContent());
+			if (controller.canSave()) {
+				controller.save();
+			}
+		}
+    }
+    
     @FXML void saveAs() {
     	Tab t = tabPane.getSelectionModel().getSelectedItem();
 		if (t!=null) {
-			PreviewController controller = ((PreviewController)t.getContent());
+			Preview controller = ((Preview)t.getContent());
 			// display save dialog
 			Window stage = root.getScene().getWindow();
 	    	FileChooser fileChooser = new FileChooser();
 	    	fileChooser.setTitle(Messages.TITLE_SAVE_AS_DIALOG.localize());
-	    	fileChooser.getExtensionFilters().add(new ExtensionFilter("PEF-file", "*.pef"));
+	    	fileChooser.getExtensionFilters().addAll(controller.getSaveAsFilters());
 	    	File selected = fileChooser.showSaveDialog(stage);
 	    	if (selected!=null) {
-				// get the url of the current tab
-				Optional<URI> _uri = controller.getBookURI();
-				if (_uri.isPresent()) {
-					URI uri = _uri.get();
-					// store to selected location
-					try {
-						Files.copy(Paths.get(uri), new FileOutputStream(selected));
-					} catch (IOException e) {
-						// Display error
-						e.printStackTrace();
-					}
+				try {
+					controller.saveAs(selected);
 					// stop watching
 					controller.closing();
 					// update contents of tab
-					setTab(t, selected.getName(), toArgs(selected));
+					setTab(t, selected.getName(), StartupDetails.open(selected), controller.getOptions());
 					// TODO: Restore document position
-				} else {
-					// TODO: Display error
+				} catch (IOException e) {
+					Alert alert = new Alert(AlertType.ERROR, e.getMessage(), ButtonType.OK);
+		    		alert.showAndWait();
 				}
 	    	}
 		}
@@ -386,7 +434,7 @@ public class MainController {
 		dialog.showAndWait();
 		File generated = dialog.generatedTestFile();
 		if (generated!=null) {
-			addTab(generated.getName(), toArgs(generated));
+			addTab(generated.getName(), StartupDetails.open(generated));
 		}
     }
     
@@ -548,32 +596,17 @@ public class MainController {
     @FXML void exportFile() {
     	Tab t = tabPane.getSelectionModel().getSelectedItem();
 		if (t!=null) {
-			Optional<URI> bookUri = ((PreviewController)t.getContent()).getBookURI();
-			if (bookUri.isPresent()) {
-				File input = new File(bookUri.get());
+			Preview controller = ((Preview)t.getContent());
+			if (controller.canExport()) {
 		    	Window stage = root.getScene().getWindow();
 		    	FileChooser fileChooser = new FileChooser();
 		    	fileChooser.setTitle(Messages.TITLE_EXPORT_DIALOG.localize());
 		    	File selected = fileChooser.showSaveDialog(stage);
 		    	if (selected!=null) {
-			    	Task<Void> exportTask = new Task<Void>(){
+			    	Task<Void> exportTask = new Task<Void>() {
 						@Override
 						protected Void call() throws Exception {
-							//TODO: sync this with the embossing code and its settings
-					    	OutputStream os = new FileOutputStream(selected);
-					    	EmbosserCatalogService ef = EmbosserCatalog.newInstance();
-					    	Embosser emb = ef.newEmbosser("org_daisy.GenericEmbosserProvider.EmbosserType.NONE");
-					    	String table = Settings.getSettings().getString(Keys.charset);
-					    	if (table!=null) {
-					    		emb.setFeature(EmbosserFeatures.TABLE, table);
-					    	}
-							EmbosserWriter embosser = emb.newEmbosserWriter(os);
-							PEFHandler ph = new PEFHandler.Builder(embosser).build();
-							FileInputStream is = new FileInputStream(input);
-							SAXParserFactory spf = SAXParserFactory.newInstance();
-							spf.setNamespaceAware(true);
-							SAXParser sp = spf.newSAXParser();
-							sp.parse(is, ph);
+							controller.export(selected);
 							return null;
 						}
 			    	};
@@ -645,35 +678,25 @@ public class MainController {
 	}
     
     private void addTab(File f) { 
-    	addTab(f.getName(), toArgs(f));
+    	addTab(f.getName(), StartupDetails.open(f));
     }
-    
-    private String[] toArgs(File f) {
-    	return new String[]{"-open", f.getAbsolutePath()};
-    }
-    
-    private void addTab(String title, String[] args) {
+
+    private void addTab(String title, StartupDetails args) {
         Tab tab = new Tab();
-        setTab(tab, title, args);
+        setTab(tab, title, args, null);
         tabPane.getTabs().add(tab);
         tabPane.getSelectionModel().select(tab);
     }
     
-    private void setTab(Tab tab, String title, String[] args) {
-    	if (title==null && args.length>=2) {
-        	title = args[1];
+    private void setTab(Tab tab, String title, StartupDetails args, Map<String, Object> options) {
+    	if (title==null && args.getFile()!=null) {
+        	title = args.getFile().getAbsolutePath();
         }
         if (title!=null) {
         	tab.setText(title);
         	setGraphic(title, tab);
         }
-        PreviewController prv = new PreviewController();
-        tab.setOnClosed(ev ->  {
-        	prv.closing();
-        });
-        prv.open(args);
-        tab.setContent(prv);
-
+        setupEditor(tab, args.getFile(), options);
     }
     
 	private void setGraphic(String fileName, Tab t) {
@@ -686,14 +709,28 @@ public class MainController {
         Tab tab = new Tab();
         setGraphic(source.getName(), tab);
         tab.setText(source.getName());
-        PreviewController prv = new PreviewController();
-        tab.setOnClosed(ev ->  {
-        	prv.closing();
-        });
-        prv.convertAndOpen(source, options);
-        tab.setContent(prv);
+        setupEditor(tab, source, options);
         tabPane.getTabs().add(tab);
         tabPane.getSelectionModel().select(tab);
+    }
+    
+    private void setupEditor(Tab tab, File source, Map<String, Object> options) {
+		AnnotatedFile ai = IdentityProvider.newInstance().identify(source);
+        if (SourcePreviewController.supportsFormat(ai) && FeatureSwitch.EDITOR.isOn()) {
+	        SourcePreviewController prv = new SourcePreviewController();
+	        tab.setOnClosed(ev ->  {
+	        	prv.closing();
+	        });
+	        prv.open(ai, options);
+	        tab.setContent(prv);
+        } else {
+	        PreviewController prv = new PreviewController();
+	        tab.setOnClosed(ev ->  {
+	        	prv.closing();
+	        });
+	        prv.open(ai, options);
+	        tab.setContent(prv);	
+        }
     }
 
 }

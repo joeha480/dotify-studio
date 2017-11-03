@@ -1,8 +1,14 @@
 package application.preview;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -14,20 +20,38 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import org.daisy.braille.utils.api.embosser.Embosser;
+import org.daisy.braille.utils.api.embosser.EmbosserCatalog;
+import org.daisy.braille.utils.api.embosser.EmbosserCatalogService;
+import org.daisy.braille.utils.api.embosser.EmbosserFeatures;
+import org.daisy.braille.utils.api.embosser.EmbosserWriter;
 import org.daisy.braille.utils.pef.PEFBook;
+import org.daisy.braille.utils.pef.PEFHandler;
 import org.daisy.dotify.api.tasks.AnnotatedFile;
 import org.daisy.dotify.api.tasks.CompiledTaskSystem;
 import org.daisy.dotify.api.tasks.TaskSystem;
-import org.daisy.dotify.consumer.identity.IdentityProvider;
 import org.daisy.dotify.consumer.tasks.TaskSystemFactoryMaker;
 import org.daisy.dotify.tasks.runner.RunnerResult;
 import org.daisy.dotify.tasks.runner.TaskRunner;
+import org.xml.sax.SAXException;
 
 import com.googlecode.e2u.BookReader;
 import com.googlecode.e2u.Start;
+import com.googlecode.e2u.StartupDetails;
+import com.googlecode.e2u.StartupDetails.Mode;
 
 import application.l10n.Messages;
 import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -38,6 +62,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
@@ -50,15 +75,19 @@ import shared.Settings.Keys;
  * @author Joel Håkansson
  *
  */
-public class PreviewController extends BorderPane {
+public class PreviewController extends BorderPane implements Preview {
 	private static final Logger logger = Logger.getLogger(PreviewController.class.getCanonicalName());
 	@FXML WebView browser;
 	private OptionsController options;
-	private String url;
 	private Start start;
 	private ExecutorService exeService;
 	private boolean closing;
 	private EmbossView embossView;
+	private final ReadOnlyBooleanProperty canEmbossProperty;
+	private final ReadOnlyBooleanProperty canExportProperty;
+	private final ReadOnlyBooleanProperty canSaveProperty;
+	private StringProperty urlProperty;
+	
 
 	/**
 	 * Creates a new preview controller.
@@ -85,6 +114,10 @@ public class PreviewController extends BorderPane {
         );
 		exeService = Executors.newWorkStealingPool();
 		closing = false;
+		canEmbossProperty = BooleanProperty.readOnlyBooleanProperty(new SimpleBooleanProperty(true));
+		canExportProperty = BooleanProperty.readOnlyBooleanProperty(new SimpleBooleanProperty(true));
+		canSaveProperty = BooleanProperty.readOnlyBooleanProperty(new SimpleBooleanProperty(false));
+		urlProperty = new SimpleStringProperty();
 	}
 	
 	/**
@@ -92,26 +125,30 @@ public class PreviewController extends BorderPane {
 	 * @param selected the file
 	 * @param options the options
 	 */
-	public void convertAndOpen(File selected, Map<String, Object> options) {
-		try {
-			File out = File.createTempFile("dotify-studio", ".pef");
-			String tag = Settings.getSettings().getString(Keys.locale, Locale.getDefault().toLanguageTag());
-			DotifyTask dt = new DotifyTask(selected, out, tag, options);
-			dt.setOnSucceeded(ev -> {
-				Thread pefWatcher = open(new String[]{"-open", out.getAbsolutePath()});
-				updateOptions(dt.getValue(), options);
-	    		Thread th = new Thread(new SourceDocumentWatcher(selected, out, tag, pefWatcher));
-	    		th.setDaemon(true);
-	    		th.start();
-			});
-			dt.setOnFailed(ev->{
-				logger.log(Level.WARNING, "Import failed.", dt.getException());
-	    		Alert alert = new Alert(AlertType.ERROR, dt.getException().toString(), ButtonType.OK);
-	    		alert.showAndWait();
-			});
-			exeService.submit(dt);
-		} catch (IOException e) {
-			e.printStackTrace();
+	public void open(AnnotatedFile selected, Map<String, Object> options) {
+		if (options==null) {
+			open(selected.getFile());
+		} else {
+			try {
+				File out = File.createTempFile("dotify-studio", ".pef");
+				String tag = Settings.getSettings().getString(Keys.locale, Locale.getDefault().toLanguageTag());
+				DotifyTask dt = new DotifyTask(selected, out, tag, options);
+				dt.setOnSucceeded(ev -> {
+					Thread pefWatcher = open(out);
+					updateOptions(dt.getValue(), options);
+		    		Thread th = new Thread(new SourceDocumentWatcher(selected, out, tag, pefWatcher));
+		    		th.setDaemon(true);
+		    		th.start();
+				});
+				dt.setOnFailed(ev->{
+					logger.log(Level.WARNING, "Import failed.", dt.getException());
+		    		Alert alert = new Alert(AlertType.ERROR, dt.getException().toString(), ButtonType.OK);
+		    		alert.showAndWait();
+				});
+				exeService.submit(dt);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -125,12 +162,14 @@ public class PreviewController extends BorderPane {
 	}
 	
     class SourceDocumentWatcher extends DocumentWatcher {
+    	private final AnnotatedFile annotatedInput;
     	private final File output;
     	private final String locale;
     	private final Thread pefWatcher;
 
-    	SourceDocumentWatcher(File input, File output, String locale, Thread pefWatcher) {
-    		super(input);
+    	SourceDocumentWatcher(AnnotatedFile input, File output, String locale, Thread pefWatcher) {
+    		super(input.getFile());
+    		this.annotatedInput = input;
     		this.output = output;
     		this.locale = locale;
     		this.pefWatcher = pefWatcher;
@@ -150,7 +189,7 @@ public class PreviewController extends BorderPane {
 		void performAction() {
 			try {
 				Map<String, Object> opts = options.getParams();
-	    		DotifyTask dt = new DotifyTask(file, output, locale, opts);
+	    		DotifyTask dt = new DotifyTask(annotatedInput, output, locale, opts);
 	    		dt.setOnFailed(ev->{
 	    			logger.log(Level.WARNING, "Update failed.", dt.getException());
 		    		Alert alert = new Alert(AlertType.ERROR, dt.getException().toString(), ButtonType.OK);
@@ -208,12 +247,12 @@ public class PreviewController extends BorderPane {
     }
 	
     class DotifyTask extends Task<DotifyResult> {
-    	private final File inputFile;
+    	private final AnnotatedFile inputFile;
     	private final File outputFile;
     	private final String locale;
     	private final Map<String, Object> params;
     	
-    	DotifyTask(File inputFile, File outputFile, String locale, Map<String, Object> params) {
+    	DotifyTask(AnnotatedFile inputFile, File outputFile, String locale, Map<String, Object> params) {
     		this.inputFile = inputFile;
     		this.outputFile = outputFile;
     		this.locale = locale;
@@ -226,8 +265,7 @@ public class PreviewController extends BorderPane {
     	
     	@Override
     	protected DotifyResult call() throws Exception {
-    		AnnotatedFile ai = IdentityProvider.newInstance().identify(inputFile);
-    		String inputFormat = getFormatString(ai);
+    		String inputFormat = getFormatString(inputFile);
     		TaskSystem ts;
 			ts = TaskSystemFactoryMaker.newInstance().newTaskSystem(inputFormat, "pef", locale);
 			logger.info("About to run with parameters " + params);
@@ -235,7 +273,7 @@ public class PreviewController extends BorderPane {
 			logger.info("Thread: " + Thread.currentThread().getThreadGroup());
 			CompiledTaskSystem tl = ts.compile(params);
 			TaskRunner.Builder builder = TaskRunner.withName(ts.getName());
-			return new DotifyResult(tl, builder.build().runTasks(ai, outputFile, tl));
+			return new DotifyResult(tl, builder.build().runTasks(inputFile, outputFile, tl));
     	}
 
     	//FIXME: Duplicated from Dotify CLI. If this function is needed to run Dotify, find a home for it
@@ -255,13 +293,12 @@ public class PreviewController extends BorderPane {
 
 	/**
 	 * Starts a new preview server.
-	 * @param args the arguments
+	 * @param file the file
 	 * @return returns a thread that watches for changes in the pef file
 	 */
-	public Thread open(String[] args) {
+	private Thread open(File file) {
 		Thread pefWatcherThread = null;
-		if (args.length==2) {
-			File file = new File(args[1]);
+		if (file!=null) {
 			PefDocumentWatcher pefWatcher = new PefDocumentWatcher(file);
     		pefWatcherThread = new Thread(pefWatcher);
     		pefWatcherThread.setDaemon(true);
@@ -273,7 +310,7 @@ public class PreviewController extends BorderPane {
 			protected String call() throws Exception {
 		        try {
 		        	start = new Start();
-		        	return start.start(args, false, false);
+		        	return start.start(new StartupDetails.Builder().mode(Mode.OPEN).file(file).log(false).display(false).build());
 				} catch (Exception e1) {
 					Logger.getLogger(this.getClass().getCanonicalName()).log(Level.SEVERE, "Failed to load server.", e1);;
 				}  
@@ -281,7 +318,8 @@ public class PreviewController extends BorderPane {
 			}
 		};
 		startServer.setOnSucceeded(ev -> {
-				this.url = startServer.getValue();
+				String url = startServer.getValue();
+				this.urlProperty.set(url);
 				if (url!=null) {
 					browser.getEngine().load(url);
 				} else {
@@ -301,13 +339,9 @@ public class PreviewController extends BorderPane {
 	public void reload() {
 		browser.getEngine().reload();
 	}
-	
-	/**
-	 * Gets the url for the book in the view.
-	 * @return returns the url
-	 */
-	public String getURL() {
-		return url;
+
+	public ReadOnlyStringProperty urlProperty() {
+		return urlProperty;
 	}
 	
 	/**
@@ -317,11 +351,7 @@ public class PreviewController extends BorderPane {
 		closing = true;
 	}
 	
-	/**
-	 * Gets the uri for the book
-	 * @return returns the uri
-	 */
-	public Optional<URI> getBookURI() {
+	private Optional<URI> getBookURI() {
 		if (start!=null) {
 			return start.getMainPage().getBookURI();
 		} else {
@@ -350,6 +380,72 @@ public class PreviewController extends BorderPane {
 	    		alert.showAndWait();
 			}
 		}
+	}
+
+	@Override
+	public void save() {
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public void saveAs(File f) throws IOException {
+		URI uri = getBookURI().orElseThrow(()->new IOException("Nothing to save."));		
+		try {
+			Files.copy(Paths.get(uri), new FileOutputStream(f));
+		} catch (IOException e) {
+			throw e;
+		}
+	}
+
+	@Override
+	public void export(File f) throws IOException {
+		URI uri = getBookURI().orElseThrow(()->new IOException("Nothing to export."));
+		File input = new File(uri);
+		//TODO: sync this with the embossing code and its settings
+    	OutputStream os = new FileOutputStream(f);
+    	EmbosserCatalogService ef = EmbosserCatalog.newInstance();
+    	Embosser emb = ef.newEmbosser("org_daisy.GenericEmbosserProvider.EmbosserType.NONE");
+    	String table = Settings.getSettings().getString(Keys.charset);
+    	if (table!=null) {
+    		emb.setFeature(EmbosserFeatures.TABLE, table);
+    	}
+		EmbosserWriter embosser = emb.newEmbosserWriter(os);
+		PEFHandler ph = new PEFHandler.Builder(embosser).build();
+		FileInputStream is = new FileInputStream(input);
+		SAXParserFactory spf = SAXParserFactory.newInstance();
+		spf.setNamespaceAware(true);
+		SAXParser sp;
+		try {
+			sp = spf.newSAXParser();
+			sp.parse(is, ph);
+		} catch (ParserConfigurationException | SAXException e) {
+			throw new IOException("Failed to export", e);
+		}
+	}
+
+	@Override
+	public List<ExtensionFilter> getSaveAsFilters() {
+		return Arrays.asList(new ExtensionFilter("PEF-file", "*.pef"));
+	}
+
+	@Override
+	public ReadOnlyBooleanProperty canEmbossProperty() {
+		return canEmbossProperty;
+	}
+
+	@Override
+	public ReadOnlyBooleanProperty canExportProperty() {
+		return canExportProperty;
+	}
+
+	@Override
+	public ReadOnlyBooleanProperty canSaveProperty() {
+		return canSaveProperty;
+	}
+
+	@Override
+	public Map<String, Object> getOptions() {
+		return options!=null?options.getParams():null;
 	}
 
 }
