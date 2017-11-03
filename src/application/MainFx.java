@@ -72,6 +72,7 @@ public class MainFx extends Application {
         FXMLLoader fxmlLoader = new FXMLLoader(this.getClass().getResource("Main.fxml"), Messages.getBundle());
         Parent root = fxmlLoader.load();
         Scene scene = new Scene(root);
+        scene.getStylesheets().add(this.getClass().getResource("xml-highlight.css").toExternalForm());
         
         MainController controller = fxmlLoader.<MainController>getController();
         controller.openArgs(getParameters().getRaw().toArray(new String[]{}));
