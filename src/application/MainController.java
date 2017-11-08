@@ -204,7 +204,7 @@ public class MainController {
 			canEmboss.unbind();
 			canExport.unbind();
 			urlProperty.unbind();
-			if (nv.getContent() instanceof Preview) {
+			if (nv!=null && nv.getContent() instanceof Preview) {
 				Preview p = ((Preview)nv.getContent());
 				canEmboss.bind(p.canEmbossProperty());
 				canExport.bind(p.canExportProperty());
