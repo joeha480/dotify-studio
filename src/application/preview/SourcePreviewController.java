@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
 
 import org.daisy.dotify.api.tasks.AnnotatedFile;
 
-import com.googlecode.e2u.StartupDetails;
-
 import application.l10n.Messages;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
