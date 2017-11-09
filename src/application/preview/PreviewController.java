@@ -287,7 +287,7 @@ public class PreviewController extends BorderPane implements Preview {
 
 	/**
 	 * Starts a new preview server.
-	 * @param args the arguments
+	 * @param file the file
 	 * @return returns a thread that watches for changes in the pef file
 	 */
 	public Thread open(File file) {
