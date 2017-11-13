@@ -26,3 +26,8 @@
 .entity {
 	-fx-fill: lime;
 }
+
+.lineno {
+	-fx-font-style: normal;
+	-fx-background-color: #eee;
+}
