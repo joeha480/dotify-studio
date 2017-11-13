@@ -183,25 +183,6 @@ public class MainController {
 	}
 	
 	private void setMenuBindings() {
-		/*
-		BooleanBinding canNotSaveBinding = new BooleanBinding() {
-			@Override
-			protected boolean computeValue() {
-				SingleSelectionModel<Tab> m = tabPane.getSelectionModel(); 
-				if (m!=null) {
-					Tab t = m.getSelectedItem();
-					if (t!=null) {
-						Node n = t.getContent();
-						if (n!=null) {
-							if (n instanceof Preview) {
-								return !((Preview)n).canSave();
-							}
-						}
-					}
-				}
-				return true;
-			}
-		};*/
 		tabPane.getSelectionModel().selectedItemProperty().addListener((o, ov, nv)->{
 			canEmboss.unbind();
 			canExport.unbind();
