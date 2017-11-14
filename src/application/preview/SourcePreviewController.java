@@ -61,61 +61,64 @@ public class SourcePreviewController extends BorderPane implements Preview {
 		canSaveProperty = new SimpleBooleanProperty(false);
 		urlProperty = new SimpleStringProperty();
 	}
-	
+
 	@FXML void initialize() {
 		tabs.getSelectionModel().selectedItemProperty().addListener((o, ot, nt)->{
 			Optional<Node> pr = Optional.of(nt.getContent())
 					.filter(v->v instanceof Preview);
 			canEmbossProperty.set(
-				pr.map(v->((Preview)v).canEmboss()).orElse(false)
-			);
+					pr.map(v->((Preview)v).canEmboss()).orElse(false)
+					);
 			canExportProperty.set(
-				pr.map(v->((Preview)v).canExport()).orElse(false)
-			);
+					pr.map(v->((Preview)v).canExport()).orElse(false)
+					);
 			canSaveProperty.set(
 					pr.map(v->((Preview)v).canSave()).orElse(false)
-				);
+					);
 			urlProperty.set(
-				pr.map(v->((Preview)v).urlProperty().get()).orElse(null)
-			);
+					pr.map(v->((Preview)v).urlProperty().get()).orElse(null)
+					);
 		});
 	}
-	
+
 	public static boolean supportsFormat(AnnotatedFile af) {
 		// TODO: also support application/epub+zip
 		return isText(af) || isHTML(af) || isXML(af);
 	}
-	
+
 	public static boolean isXML(AnnotatedFile af) {
 		return af.getMediaType()!=null && XML_PATTERN.matcher(af.getMediaType()).matches();
 	}
-	
+
 	public static boolean isHTML(AnnotatedFile af) { 
 		return af.getMediaType()!=null && "text/html".equals(af.getMediaType());
 	}
-	
+
 	public static boolean isText(AnnotatedFile af) {
 		return af.getMediaType()!=null && "text/plain".equals(af.getMediaType());
 	}
-	
+
 	/**
 	 * Converts and opens a file.
 	 * @param selected the file
 	 * @param options the options
 	 */
-	public void convertAndOpen(AnnotatedFile selected, Map<String, Object> options) {
-        PreviewController prv = new PreviewController();
-        prv.convertAndOpen(selected, options);
-        setupOpen(prv, selected);
+	public void open(AnnotatedFile selected, Map<String, Object> options) {
+		if (options==null) {
+			open(selected);
+		} else {
+			PreviewController prv = new PreviewController();
+			prv.open(selected, options);
+			setupOpen(prv, selected);
+		}
 	}
-	
-	public Thread open(AnnotatedFile selected) {
-        PreviewController prv = new PreviewController();
-        Thread th = prv.open(selected.getFile());
-        setupOpen(prv, selected);
-		return th;
+
+	public void open(AnnotatedFile selected) {
+		PreviewController prv = new PreviewController();
+		prv.open(selected, null);
+		setupOpen(prv, selected);
 	}
-	
+
 	private void setupOpen(PreviewController prv, AnnotatedFile selected) {
 		preview.setContent(prv);
 		source.setText(Messages.LABEL_SOURCE.localize(selected.getFile().getName()));
@@ -147,12 +150,12 @@ public class SourcePreviewController extends BorderPane implements Preview {
 	public void closing() {
 		getSelectedView().ifPresent(v->v.closing());
 	}
-	
+
 	private Optional<Preview> getSelectedView() {
 		return Optional.ofNullable(tabs.getSelectionModel())
-			.map(v->v.getSelectedItem().getContent())
-			.filter(v->v instanceof Preview)
-			.map(v->(Preview)v);
+				.map(v->v.getSelectedItem().getContent())
+				.filter(v->v instanceof Preview)
+				.map(v->(Preview)v);
 	}
 
 	@Override
@@ -175,7 +178,7 @@ public class SourcePreviewController extends BorderPane implements Preview {
 	public void export(File f) throws IOException {
 		((Preview)preview.getContent()).export(f);
 	}
-	
+
 	@Override
 	public ReadOnlyBooleanProperty canEmbossProperty() {
 		return canEmbossProperty;
@@ -211,4 +214,24 @@ public class SourcePreviewController extends BorderPane implements Preview {
 		}
 	}
 
+	@Override
+	public Map<String, Object> getOptions() {
+		SingleSelectionModel<Tab> m = tabs.getSelectionModel();
+		if (m!=null) {
+			Tab t = m.getSelectedItem();
+			if (t!=null && t.getContent() instanceof Preview) {
+				Preview p = (Preview)t.getContent();
+				if (t == source) {
+					if (p.getURL().orElse("").endsWith(".pef")) {
+						return null;
+					} else {
+						return ((Preview)preview.getContent()).getOptions();
+					}
+				} else if (t == preview) {
+					return null;
+				}
+			}
+		}
+		throw new RuntimeException();
+	}
 }
