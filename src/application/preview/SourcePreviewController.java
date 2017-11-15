@@ -36,6 +36,7 @@ import javafx.stage.FileChooser.ExtensionFilter;
 public class SourcePreviewController extends BorderPane implements Preview {
 	private static final Logger logger = Logger.getLogger(SourcePreviewController.class.getCanonicalName());
 	static final Pattern XML_PATTERN = Pattern.compile("\\Qapplication/\\E([\\w-]+\\+)?\\Qxml\\E");
+	static final Pattern TEXT_PATTERN = Pattern.compile("\\Qtext/\\E.+");
 	@FXML TabPane tabs;
 	@FXML Tab preview;
 	@FXML Tab source;
@@ -95,7 +96,7 @@ public class SourcePreviewController extends BorderPane implements Preview {
 	}
 
 	public static boolean isText(AnnotatedFile af) {
-		return af.getMediaType()!=null && "text/plain".equals(af.getMediaType());
+		return af.getMediaType()!=null && TEXT_PATTERN.matcher(af.getMediaType()).matches();
 	}
 
 	/**
