@@ -132,11 +132,11 @@ public class PreviewController extends BorderPane implements Preview {
 			try {
 				File out = File.createTempFile("dotify-studio", ".pef");
 				String tag = Settings.getSettings().getString(Keys.locale, Locale.getDefault().toLanguageTag());
-				DotifyTask dt = new DotifyTask(selected, out, tag, options);
+				ConverterDetails details = new ConverterDetails(selected, out, tag);
+				DotifyTask dt = new DotifyTask(details, options);
 				dt.setOnSucceeded(ev -> {
-					Thread pefWatcher = open(out);
-					updateOptions(dt.getValue(), options);
-		    		Thread th = new Thread(new SourceDocumentWatcher(selected, out, tag, pefWatcher));
+					updateOptions(dt.getValue(), details, options);
+		    		Thread th = new Thread(new SourceDocumentWatcher(details, open(details.output)));
 		    		th.setDaemon(true);
 		    		th.start();
 				});
@@ -144,6 +144,9 @@ public class PreviewController extends BorderPane implements Preview {
 					logger.log(Level.WARNING, "Import failed.", dt.getException());
 		    		Alert alert = new Alert(AlertType.ERROR, dt.getException().toString(), ButtonType.OK);
 		    		alert.showAndWait();
+		    		Thread th = new Thread(new SourceDocumentWatcher(details, null));
+		    		th.setDaemon(true);
+		    		th.start();
 				});
 				exeService.submit(dt);
 			} catch (IOException e) {
@@ -152,7 +155,7 @@ public class PreviewController extends BorderPane implements Preview {
 		}
 	}
 	
-	private void updateOptions(DotifyResult dr, Map<String, Object> opts) {
+	private void updateOptions(DotifyResult dr, ConverterDetails details, Map<String, Object> opts) {
 		if (options==null) {
 			options = new OptionsController();
 			setLeft(options);
@@ -161,17 +164,23 @@ public class PreviewController extends BorderPane implements Preview {
 
 	}
 	
-    class SourceDocumentWatcher extends DocumentWatcher {
-    	private final AnnotatedFile annotatedInput;
+	static class ConverterDetails {
+    	private final AnnotatedFile input;
     	private final File output;
     	private final String locale;
-    	private final Thread pefWatcher;
-
-    	SourceDocumentWatcher(AnnotatedFile input, File output, String locale, Thread pefWatcher) {
-    		super(input.getFile());
-    		this.annotatedInput = input;
+    	ConverterDetails(AnnotatedFile input, File output, String locale) {
+    		this.input = input;
     		this.output = output;
     		this.locale = locale;
+    	}
+	}
+    class SourceDocumentWatcher extends DocumentWatcher {
+    	private final ConverterDetails details;
+    	private Thread pefWatcher;
+
+    	SourceDocumentWatcher(ConverterDetails details, Thread pefWatcher) {
+    		super(details.input.getFile());
+    		this.details = details;
     		this.pefWatcher = pefWatcher;
     	}
 
@@ -182,14 +191,14 @@ public class PreviewController extends BorderPane implements Preview {
 
 		@Override
 		boolean shouldPerformAction() {
-			return (super.shouldPerformAction() && options.isWatching()) || options.refreshRequested();
+			return (super.shouldPerformAction() && options!=null && options.isWatching()) || options!=null && options.refreshRequested();
 		}
 
 		@Override
 		void performAction() {
 			try {
 				Map<String, Object> opts = options.getParams();
-	    		DotifyTask dt = new DotifyTask(annotatedInput, output, locale, opts);
+	    		DotifyTask dt = new DotifyTask(details, opts);
 	    		dt.setOnFailed(ev->{
 	    			logger.log(Level.WARNING, "Update failed.", dt.getException());
 		    		Alert alert = new Alert(AlertType.ERROR, dt.getException().toString(), ButtonType.OK);
@@ -199,8 +208,10 @@ public class PreviewController extends BorderPane implements Preview {
 	    			Platform.runLater(() -> {
 	    				if (pefWatcher!=null) {
 	    					pefWatcher.interrupt();
+	    				} else {
+	    					pefWatcher = open(details.output);
 	    				}
-	    				updateOptions(dt.getValue(), opts);
+	    				updateOptions(dt.getValue(), details, opts);
 	    			});
 	    		});
 	    		exeService.submit(dt);
@@ -247,15 +258,11 @@ public class PreviewController extends BorderPane implements Preview {
     }
 	
     class DotifyTask extends Task<DotifyResult> {
-    	private final AnnotatedFile inputFile;
-    	private final File outputFile;
-    	private final String locale;
+    	private final ConverterDetails details;
     	private final Map<String, Object> params;
     	
-    	DotifyTask(AnnotatedFile inputFile, File outputFile, String locale, Map<String, Object> params) {
-    		this.inputFile = inputFile;
-    		this.outputFile = outputFile;
-    		this.locale = locale;
+    	DotifyTask(ConverterDetails details, Map<String, Object> params) {
+    		this.details = details;
     		this.params = new HashMap<>(params);
     		this.params.put("systemName", BuildInfo.NAME);
     		this.params.put("systemBuild", BuildInfo.BUILD);
@@ -265,15 +272,15 @@ public class PreviewController extends BorderPane implements Preview {
     	
     	@Override
     	protected DotifyResult call() throws Exception {
-    		String inputFormat = getFormatString(inputFile);
+    		String inputFormat = getFormatString(details.input);
     		TaskSystem ts;
-			ts = TaskSystemFactoryMaker.newInstance().newTaskSystem(inputFormat, "pef", locale);
+			ts = TaskSystemFactoryMaker.newInstance().newTaskSystem(inputFormat, "pef", details.locale);
 			logger.info("About to run with parameters " + params);
 			
 			logger.info("Thread: " + Thread.currentThread().getThreadGroup());
 			CompiledTaskSystem tl = ts.compile(params);
 			TaskRunner.Builder builder = TaskRunner.withName(ts.getName());
-			return new DotifyResult(tl, builder.build().runTasks(inputFile, outputFile, tl));
+			return new DotifyResult(tl, builder.build().runTasks(details.input, details.output, tl));
     	}
 
     	//FIXME: Duplicated from Dotify CLI. If this function is needed to run Dotify, find a home for it
