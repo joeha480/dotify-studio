@@ -11,13 +11,25 @@ class FileInfo {
 	private final Charset charset;
 	
 	static class Builder {
-		private final File file;
+		private File file;
 		private boolean xml = false;
 		private boolean bom = false;
 		private Charset charset = StandardCharsets.UTF_8;
 		
 		Builder(File f) {
 			this.file = f;
+		}
+		
+		Builder(FileInfo template) {
+			this.file = template.file;
+			this.xml = template.xml;
+			this.bom = template.bom;
+			this.charset = template.charset;
+		}
+		
+		Builder file(File value) {
+			this.file = value;
+			return this;
 		}
 		
 		Builder xml(boolean value) {
@@ -45,6 +57,10 @@ class FileInfo {
 		this.xml = builder.xml;
 		this.bom = builder.bom;
 		this.charset = builder.charset;
+	}
+	
+	public static FileInfo.Builder with(FileInfo template) {
+		return new FileInfo.Builder(template);
 	}
 
 	public File getFile() {

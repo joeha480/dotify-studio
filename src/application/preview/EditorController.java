@@ -63,7 +63,7 @@ public class EditorController extends BorderPane implements Preview {
 	@FXML Label bomLabel;
 	private CodeArea codeArea;
 	private VirtualizedScrollPane<CodeArea> scrollPane;
-	private FileInfo fileInfo = new FileInfo.Builder(null).build();
+	private FileInfo fileInfo = new FileInfo.Builder((File)null).build();
 	private ExecutorService executor;
 	private final ReadOnlyBooleanProperty canEmbossProperty;
 	private final ReadOnlyBooleanProperty canExportProperty;
@@ -141,7 +141,7 @@ public class EditorController extends BorderPane implements Preview {
 			.subscribe(this::applyHighlighting);
 		FileInfo.Builder builder = new FileInfo.Builder(f);
 		try {
-			String text = loadFile(f, builder, xmlMarkup);
+			String text = loadData(Files.readAllBytes(f.toPath()), builder, xmlMarkup);
 			codeArea.replaceText(0, 0, text);
 			canSaveProperty.set(true);
 		} catch (IOException | XmlEncodingDetectionException e) {
@@ -149,16 +149,14 @@ public class EditorController extends BorderPane implements Preview {
 			canSaveProperty.set(false);
 		} finally {
 			this.fileInfo = builder.build();
-			encodingLabel.setText(fileInfo.getCharset().name());
-			bomLabel.setText(fileInfo.hasBom()?"BOM":"-");
+			updateFileInfo(this.fileInfo);
 		}
 	}
 	
-	static String loadFile(File f, FileInfo.Builder builder, boolean xmlMarkup) throws IOException, XmlEncodingDetectionException {
-		builder.xml(xmlMarkup);
-		byte[] data = Files.readAllBytes(f.toPath());
+	static String loadData(byte[] data, FileInfo.Builder builder, boolean xml) throws IOException, XmlEncodingDetectionException {
+		builder.xml(xml);
 		Charset encoding;
-		if (xmlMarkup) {
+		if (xml) {
 			//TODO: Ask if there is an encoding mismatch
 			encoding = Charset.forName(XMLTools.detectXmlEncoding(data));
 		} else {
@@ -201,7 +199,7 @@ public class EditorController extends BorderPane implements Preview {
 	@Override
 	public void save() {
 		try {
-			saveToFile(fileInfo.getFile(), fileInfo, codeArea.getText());
+			updateFileInfo(saveToFile(fileInfo.getFile(), fileInfo, codeArea.getText()));
 		} catch (IOException e) {
 			logger.warning("Failed to write: " + fileInfo.getFile());
 		}
@@ -209,10 +207,18 @@ public class EditorController extends BorderPane implements Preview {
 
 	@Override
 	public void saveAs(File f) throws IOException {
-		saveToFile(f, fileInfo, codeArea.getText());
+		updateFileInfo(saveToFile(f, fileInfo, codeArea.getText()));
 	}
 	
-	static void saveToFile(File f, FileInfo fileInfo, String text) throws IOException {
+	private void updateFileInfo(FileInfo fileInfo) {
+		this.fileInfo = fileInfo;
+		encodingLabel.setText(fileInfo.getCharset().name());
+		bomLabel.setText(fileInfo.hasBom()?"BOM":"");
+	}
+	
+	static FileInfo saveToFile(File f, FileInfo fileInfo, String text) throws IOException {
+		FileInfo.Builder builder = FileInfo.with(fileInfo);
+		builder.file(f);
 		Charset charset = StandardCharsets.UTF_8;
 		Optional<String> _encoding;
 		if (fileInfo.isXml() && (_encoding = XMLTools.getDeclaredEncoding(text)).isPresent()) {
@@ -224,22 +230,45 @@ public class EditorController extends BorderPane implements Preview {
 					Alert alert = new Alert(AlertType.ERROR, Messages.ERROR_UNSUPPORTED_XML_ENCODING.localize(encoding), ButtonType.OK);
 					alert.showAndWait();
 				});
-				return;
+				return null;
 			}
-			if (StandardCharsets.UTF_16.equals(charset) || "UTF-32".equalsIgnoreCase(encoding) || StandardCharsets.UTF_8.equals(charset) && fileInfo.hasBom()) {
-				// UTF-16 and UTF-32 declared without endian suffix (e.g. UTF-16LE) require a BOM
-				// UTF-8 should have it if it had it when the file was read (or if it were changed in the editor) 
+			if (StandardCharsets.UTF_16.equals(charset)) {
+				// UTF-16 will append a BOM by itself
+				builder.bom(true);
+			} else if (fileInfo.hasBom() && (isStandardUnicodeCharset(charset) || isUtf32Charset(encoding))) {
+				// Add BOM if the original file had it and the new encoding is a unicode charset
 				text = BYTE_ORDER_MARK + text;
+				builder.bom(true);
+			} else {
+				builder.bom(false);
 			}
 		} else {
-			// Text file, or an XML-file without a declaration, in which case it was read as UTF-8
+			// Text file, or an XML-file without a declaration
 			charset = fileInfo.getCharset();
-			// For text files, all unicode encodings require a BOM (unless it's utf-8)
-			if (!StandardCharsets.UTF_8.equals(charset) || fileInfo.hasBom()) {
+			if (StandardCharsets.UTF_16.equals(charset)) {
+				// UTF-16 will append a BOM by itself
+				builder.bom(true);
+			} else if (	(StandardCharsets.UTF_8.equals(charset) && fileInfo.hasBom()) ||
+						(!StandardCharsets.UTF_8.equals(charset) && isStandardUnicodeCharset(charset) || isUtf32Charset(charset.name())) ) {
+				// For text files, all unicode encodings require a BOM (unless it's utf-8)
 				text = BYTE_ORDER_MARK + text;
+				builder.bom(true);
+			} else {
+				builder.bom(false);
 			}
 		}
+		builder.charset(charset);
 		Files.write(f.toPath(), text.getBytes(charset));
+		return builder.build();
+	}
+	
+	private static boolean isStandardUnicodeCharset(Charset charset) {
+		return StandardCharsets.UTF_8.equals(charset) || StandardCharsets.UTF_16.equals(charset) || StandardCharsets.UTF_16LE.equals(charset)
+				|| StandardCharsets.UTF_16BE.equals(charset);
+	}
+	
+	private static boolean isUtf32Charset(String encoding) {
+		return encoding.toLowerCase().startsWith("utf-32");
 	}
 
 	@Override
