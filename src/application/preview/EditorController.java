@@ -164,7 +164,7 @@ public class EditorController extends BorderPane implements Preview {
 		}
 		builder.charset(encoding);
 		String text = new String(data, encoding);
-		if (text.charAt(0)==BYTE_ORDER_MARK) {
+		if (!text.isEmpty() && text.charAt(0)==BYTE_ORDER_MARK) {
 			builder.bom(true);
 			text = text.substring(1);
 		} else {
