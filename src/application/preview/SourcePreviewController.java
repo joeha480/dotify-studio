@@ -149,7 +149,8 @@ public class SourcePreviewController extends BorderPane implements Preview {
 
 	@Override
 	public void closing() {
-		getSelectedView().ifPresent(v->v.closing());
+		((Preview)source.getContent()).closing();
+		((Preview)preview.getContent()).closing();
 	}
 
 	private Optional<Preview> getSelectedView() {
