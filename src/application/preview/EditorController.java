@@ -27,6 +27,7 @@ import org.daisy.dotify.common.xml.XmlEncodingDetectionException;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.NavigationActions;
 import org.fxmisc.richtext.model.StyleSpans;
 
 import application.l10n.Messages;
@@ -173,6 +174,9 @@ public class EditorController extends BorderPane implements Preview {
 		try {
 			String text = loadData(Files.readAllBytes(f.toPath()), builder, xmlMarkup);
 			codeArea.replaceText(0, 0, text);
+			if (fileInfo==null || !f.equals(fileInfo.getFile())) {
+				codeArea.getUndoManager().forgetHistory();
+			}
 			canSaveProperty.set(true);
 		} catch (IOException | XmlEncodingDetectionException e) {
 			logger.warning("Failed to read: " + f);
