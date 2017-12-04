@@ -214,6 +214,9 @@ public class Settings {
 	}
 	    
 	static synchronized List<File> getRecent(File recentFile) {
+		if (!recentFile.exists()) {
+			return Collections.emptyList();
+		}
     	try {
     		List<String> recentPaths = Files.readAllLines(recentFile.toPath());
     		// deleting the file because we will write a cleaned up version later
@@ -240,7 +243,7 @@ public class Settings {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return null;
+			return Collections.emptyList();
 		}
     }
 	

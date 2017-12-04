@@ -58,6 +58,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckMenuItem;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SingleSelectionModel;
@@ -101,6 +102,7 @@ public class MainController {
 	@FXML private BorderPane consoleRoot;
 	@FXML private WebView console;
 	@FXML private ScrollPane consoleScroll;
+	@FXML private Menu openRecentMenu;
 	@FXML private MenuItem closeMenuItem;
 	@FXML private MenuItem exportMenuItem;
 	@FXML private MenuItem saveMenuItem;
@@ -178,7 +180,13 @@ public class MainController {
 		});
 
 		clearConsole();
-		
+		Settings.getSettings().getRecent().forEach(v->{
+			MenuItem mi = new MenuItem(v.getName());
+			mi.setOnAction(vx->{
+				addTab(v);
+			});
+			openRecentMenu.getItems().add(mi);
+		});
 		console.setOnDragOver(event->event.consume());
 		exeService = Executors.newWorkStealingPool();
 		System.setOut(new PrintStream(new ConsoleStream("out")));
