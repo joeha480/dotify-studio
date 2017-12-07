@@ -26,7 +26,11 @@ import javax.xml.transform.Source;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
+import org.daisy.dotify.common.xml.NamespaceContextBuilder;
 import org.daisy.dotify.common.xml.XMLTools;
 import org.daisy.dotify.common.xml.XMLToolsException;
 import org.daisy.dotify.common.xml.XmlEncodingDetectionException;
@@ -45,7 +49,10 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 import org.fxmisc.richtext.model.StyleSpans;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
 import application.common.BindingStore;
 import application.common.FeatureSwitch;
@@ -439,6 +446,32 @@ public class EditorController extends BorderPane implements Editor {
 	public void replace(String replace) {
 		if (codeArea.getSelection().getLength()>0) {
 			codeArea.replaceSelection(replace);
+		}
+	}
+
+	@FXML void searchXPath() {
+		if (fileInfo.isXml()) {
+			FileInfo.Builder builder = FileInfo.with(fileInfo);
+			byte[] bytes;
+			try {
+				bytes = prepareSaveToFile(builder, fileInfo, codeArea.getText());
+				Document doc = PositionalXMLReader.readXML(new ByteArrayInputStream(bytes));
+				XPath xpath = XPathFactory.newInstance().newXPath();
+				//FIXME: set default context from document
+				NamespaceContextBuilder context = new NamespaceContextBuilder("http://www.daisy.org/z3986/2005/dtbook/");
+				//TODO: add ns mappings from document
+				context.add("dtb", "http://www.daisy.org/z3986/2005/dtbook/");
+				xpath.setNamespaceContext(context.build());
+				NodeList nodes = (NodeList)xpath.evaluate("//dtb:level1", doc, javax.xml.xpath.XPathConstants.NODESET);
+				System.out.println("Results:");
+				for (int i = 0; i<nodes.getLength(); i++) {
+					org.w3c.dom.Node node = nodes.item(i);
+					System.out.println("Line number: " + node.getUserData("lineNumber"));
+				}
+				System.out.println("Done!");
+			} catch (IOException | SAXException | XPathExpressionException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 
