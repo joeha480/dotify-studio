@@ -50,6 +50,7 @@ public class SourcePreviewController extends BorderPane implements Editor {
 	private static final Logger logger = Logger.getLogger(SourcePreviewController.class.getCanonicalName());
 	private static final int PREVIEW_INDEX = 0;
 	private static final int SOURCE_INDEX = 1;
+	private static final String ACTIVE_STYLE_CLASS = "active";
 
 	@FXML TabPane tabs;
 	@FXML Tab preview;
@@ -273,6 +274,8 @@ public class SourcePreviewController extends BorderPane implements Editor {
 			preview.setContent(null);
 			setSplitPane();
 		} else if (getCenter() instanceof SplitPane) {
+			previewContent.getStyleClass().remove(ACTIVE_STYLE_CLASS);
+			sourceContent.getStyleClass().remove(ACTIVE_STYLE_CLASS);
 			SplitPane sp = (SplitPane)getCenter();			
 			sp.getItems().clear();
 			source.setContent(sourceContent);
@@ -282,12 +285,16 @@ public class SourcePreviewController extends BorderPane implements Editor {
 	}
 
 	private void setSplitPane() {
+		previewContent.getStyleClass().remove(ACTIVE_STYLE_CLASS);
+		sourceContent.getStyleClass().remove(ACTIVE_STYLE_CLASS);
 		// Put the preview first by default and if it matches the selected view
 		boolean previewFirst = getCurrentEditor().map(v->v==previewContent).orElse(true);
 		SplitPane sp;
 		if (previewFirst) {
+			previewContent.getStyleClass().add(ACTIVE_STYLE_CLASS);
 			sp = new SplitPane(previewContent, sourceContent);
 		} else {
+			sourceContent.getStyleClass().add(ACTIVE_STYLE_CLASS);
 			sp = new SplitPane(sourceContent, previewContent);
 		}
 		sp.setDividerPosition(0, 0.6);
