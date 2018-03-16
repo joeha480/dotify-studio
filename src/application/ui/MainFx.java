@@ -48,6 +48,52 @@ public class MainFx extends Application {
 
 	@Override
 	public void start(Stage primaryStage) throws IOException {
+		loadPlugins();
+
+		FXMLLoader fxmlLoader = new FXMLLoader(MainFx.class.getResource("Main.fxml"), Messages.getBundle());
+		Scene scene = loadStage(fxmlLoader, primaryStage);
+
+		// Handle startup arguments
+		MainController controller = fxmlLoader.<MainController>getController();
+		Optional<StartupDetails> args = StartupDetails.parse(getParameters().getRaw().toArray(new String[]{}));
+		args.ifPresent(a->controller.openArgs(a));
+
+		if (!args.isPresent() && getParameters().getRaw().size()>0) {
+			Platform.runLater(()->{
+				Alert alert = new Alert(AlertType.ERROR, Messages.ERROR_INVALID_ARGUMENTS.localize(getParameters().getRaw()), ButtonType.OK);
+				alert.showAndWait();
+			});
+		}
+
+		// Handle close request
+		scene.getWindow().setOnCloseRequest(new EventHandler<WindowEvent>() {
+			public void handle(WindowEvent ev) {
+				if (!controller.confirmShutdown()) {
+					ev.consume();
+				}
+			}
+		});
+	}
+	
+	static Scene loadStage(FXMLLoader fxmlLoader, Stage primaryStage) throws IOException {
+		primaryStage.setTitle("Dotify Studio");
+		primaryStage.getIcons().add(new Image(MainFx.class.getResourceAsStream("resource-files/icon.png")));
+		Screen screen = Screen.getPrimary();
+		Rectangle2D bounds = screen.getVisualBounds();
+
+		primaryStage.setX(bounds.getMinX());
+		primaryStage.setY(bounds.getMinY());
+		primaryStage.setWidth(bounds.getWidth());
+		primaryStage.setHeight(bounds.getHeight());
+
+		Parent root = fxmlLoader.load();
+		Scene scene = new Scene(root);
+		primaryStage.setScene(scene);
+		primaryStage.show();
+		return scene;
+	}
+	
+	private void loadPlugins() {
 		try {
 			//TODO: check error conditions, such as null
 			File parent = new File((MainFx.class.getProtectionDomain().getCodeSource().getLocation()).toURI()).getParentFile();
@@ -71,42 +117,6 @@ public class MainFx extends Application {
 				logger.log(Level.FINE, "Failed to set plugins class loader.", e);
 			}
 		}
-
-		primaryStage.setTitle("Dotify Studio");
-		primaryStage.getIcons().add(new Image(this.getClass().getResourceAsStream("resource-files/icon.png")));
-		Screen screen = Screen.getPrimary();
-		Rectangle2D bounds = screen.getVisualBounds();
-
-		primaryStage.setX(bounds.getMinX());
-		primaryStage.setY(bounds.getMinY());
-		primaryStage.setWidth(bounds.getWidth());
-		primaryStage.setHeight(bounds.getHeight());
-
-		FXMLLoader fxmlLoader = new FXMLLoader(this.getClass().getResource("Main.fxml"), Messages.getBundle());
-		Parent root = fxmlLoader.load();
-		Scene scene = new Scene(root);
-
-		primaryStage.setScene(scene);
-		primaryStage.show();
-		
-		MainController controller = fxmlLoader.<MainController>getController();
-		Optional<StartupDetails> args = StartupDetails.parse(getParameters().getRaw().toArray(new String[]{}));
-		args.ifPresent(a->controller.openArgs(a));
-
-		if (!args.isPresent() && getParameters().getRaw().size()>0) {
-			Platform.runLater(()->{
-				Alert alert = new Alert(AlertType.ERROR, Messages.ERROR_INVALID_ARGUMENTS.localize(getParameters().getRaw()), ButtonType.OK);
-				alert.showAndWait();
-			});
-		}
-
-		scene.getWindow().setOnCloseRequest(new EventHandler<WindowEvent>() {
-			public void handle(WindowEvent ev) {
-				if (!controller.confirmShutdown()) {
-					ev.consume();
-				}
-			}
-		});
 	}
 	
 	private static List<File> listFiles(File dir) {
