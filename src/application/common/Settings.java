@@ -14,7 +14,7 @@ import java.util.prefs.Preferences;
 public enum Settings {
 	INSTANCE;
 	public enum Keys {version, device, embosser, printMode, table, paper, cutLengthValue, cutLengthUnit, orientation, zFolding, charset, align, brailleFont, textFont, libraryPath, locale,
-		lastOpenPath, lastSavePath};
+		lastOpenPath, lastSavePath, importOutputFormat};
 	/**
 	 *  Modify this value when making incompatible changes to the settings structure
 	 */
@@ -121,6 +121,14 @@ public enum Settings {
 	
 	public void resetKey(Keys key) {
 		p.remove(getRegKey(key));
+	}
+	
+	public String getImportOutputFormat() {
+		return getString(Keys.importOutputFormat, "application/x-pef+xml");
+	}
+	
+	public void setImportOutputFormat(String mediaType) {
+		put(Keys.importOutputFormat, mediaType);
 	}
 	
 	public File getLibraryPath() {

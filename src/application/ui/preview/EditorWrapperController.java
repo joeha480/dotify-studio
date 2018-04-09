@@ -14,7 +14,6 @@ import org.daisy.dotify.studio.api.PreviewMaker;
 import org.daisy.streamline.api.media.AnnotatedFile;
 import org.daisy.streamline.api.media.FileDetails;
 
-import application.common.FeatureSwitch;
 import application.common.Settings;
 import application.common.Settings.Keys;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -39,7 +38,7 @@ public class EditorWrapperController extends BorderPane implements Editor {
 		DotifyController dotify = null;
 		Editor prv;
 		if (options!=null) {
-			FileDetails previewDetails = FeatureSwitch.HTML_OUTPUT_FORMAT.isOn()?FileDetailsCatalog.HTML_FORMAT:FileDetailsCatalog.PEF_FORMAT;
+			FileDetails previewDetails = FileDetailsCatalog.forMediaType(Settings.getSettings().getImportOutputFormat());
 			OpenableEditor pr = previewMaker.newPreview(previewDetails).orElse(null);
 			prv = getEditor(selected, options, pr, previewMaker);
 			try {
