@@ -95,6 +95,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebHistory;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -882,13 +883,21 @@ public class MainController {
 	}
 
 	@FXML void openHelpTab() {
-		// if the tab is not visible, recreate it (this is a workaround for https://github.com/brailleapps/dotify-studio/issues/20)
-		Tab old = helpTab;
+		boolean wasNull = helpTab==null;
 		if (helpTab==null || !tabPane.getTabs().contains(helpTab)) {
-			WebView wv = new WebView();
-			wv.setOnDragOver(event->event.consume());
-			helpTab = new Tab(Messages.TAB_HELP_CONTENTS.localize(), wv);
-			helpTab.setGraphic(buildImage(this.getClass().getResource("resource-files/help.png")));
+			WebView wv;
+			if (helpTab==null) {
+				// Create
+				wv = new WebView();
+				wv.setOnDragOver(event->event.consume());
+				helpTab = new Tab(Messages.TAB_HELP_CONTENTS.localize(), wv);
+				helpTab.setGraphic(buildImage(this.getClass().getResource("resource-files/help.png")));
+			} else {
+				// Reset
+				wv = (WebView)helpTab.getContent();
+				WebHistory hist = wv.getEngine().getHistory();
+				wv.getEngine().getHistory().go(-hist.getCurrentIndex());
+			}
 			String helpURL = getHelpURL();
 			if (helpURL!=null) {
 				WebEngine engine = wv.getEngine();
@@ -901,7 +910,7 @@ public class MainController {
 			tabPane.getTabs().add(helpTab);
 		}
 		tabPane.getSelectionModel().select(helpTab);
-		if (helpTab!=old) {
+		if (wasNull) {
 			setMenuBindings();
 		}
 	}
