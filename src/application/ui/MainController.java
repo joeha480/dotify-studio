@@ -177,6 +177,7 @@ public class MainController {
 	@FXML void initialize() {
 		toolsPane = new TabPane();
 		SplitPane.setResizableWithParent(toolsPane, false);
+		consoleLight = new UnsetConsoleLight();
 		validationController = new ValidationController();
 		validationTab.setContent(validationController);
 		toolsPane.addEventHandler(KeyEvent.KEY_RELEASED, ev-> {
@@ -250,8 +251,56 @@ public class MainController {
 		canToggleView = new SimpleBooleanProperty();
 		urlProperty = new SimpleStringProperty();
 		topMenuBar.getMenus().remove(convertMenu);
+		consoleTab.setGraphic(consoleIcon);
+		Thread th = new Thread(consoleLight);
+		th.setDaemon(true);
+		th.start();
 		//add menu bindings
 		Platform.runLater(()->setMenuBindings());
+	}
+	
+	private UnsetConsoleLight consoleLight;
+	private ImageView consoleIcon = new ImageView(OFF_IMG);
+	private static final Image ON_IMG = new Image(MainController.class.getResource("resource-files/led-on.png").toString());
+	private static final Image OFF_IMG = new Image(MainController.class.getResource("resource-files/led-off.png").toString());
+	
+	private class UnsetConsoleLight extends Task<Void> {
+		private static final int DELAY = 300;
+		private boolean on = false;
+		private long time = System.currentTimeMillis();
+
+		@Override
+		protected Void call() throws Exception {
+			while (!isCancelled()) {
+				if (on) {
+					on = false;
+					long dt = time-System.currentTimeMillis();
+					while (dt>0) {
+						Thread.sleep(dt);
+						dt = time-System.currentTimeMillis();
+					}
+					Platform.runLater(()->{
+						consoleIcon.setImage(OFF_IMG);
+					});
+				} else {
+					Thread.sleep(50);
+				}
+			}
+			return null;
+		}
+		
+		/**
+		 * Call from main thread.
+		 */
+		void turnOn() {
+			time = System.currentTimeMillis()+DELAY;
+			if (!on) {
+				on = true;
+				consoleIcon.setImage(ON_IMG);
+			}
+		}
+
+		
 	}
 	
 	private void setMenuBindings() {
@@ -538,6 +587,7 @@ public class MainController {
 		void write(String s) {
 			Platform.runLater(()->{
 				synchronized (console) {
+					consoleLight.turnOn();
 					Document doc = console.getEngine().getDocument();
 					org.w3c.dom.Node body = doc.getElementsByTagName("body").item(0);
 					Element p = doc.createElement("p");
