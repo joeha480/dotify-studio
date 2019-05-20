@@ -8,15 +8,17 @@
 <?import javafx.scene.control.MenuItem?>
 <?import javafx.scene.control.SeparatorMenuItem?>
 <?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.input.KeyCodeCombination?>
+<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.text.Font?>
 <?import javafx.scene.web.WebView?>
 
-<BorderPane fx:id="root" prefHeight="600.0" prefWidth="800.0" stylesheets="@main.css" xmlns="http://javafx.com/javafx/8.0.111" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.MainController">
+<BorderPane fx:id="root" prefHeight="600.0" prefWidth="800.0" stylesheets="@main.css" xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="application.MainController">
    <center>
       <SplitPane fx:id="splitPane" dividerPositions="0.0" BorderPane.alignment="CENTER">
          <items>
@@ -24,33 +26,46 @@
             <SplitPane fx:id="verticalSplitPane" dividerPositions="0.8" orientation="VERTICAL" SplitPane.resizableWithParent="false">
                <items>
                   <TabPane fx:id="tabPane" tabClosingPolicy="ALL_TABS" />
-                  <BorderPane fx:id="consoleRoot" SplitPane.resizableWithParent="false">
-                     <center>
-                        <WebView fx:id="console" minHeight="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" />
-                     </center>
-                     <top>
-                        <HBox alignment="TOP_RIGHT" spacing="5.0" style="-fx-border-style: hidden hidden solid hidden; -fx-border-color: #e0e0e0;" BorderPane.alignment="CENTER">
-                           <children>
-                              <ToggleButton fx:id="scrollLockButton" accessibleText="%accessible-text-scroll-lock" mnemonicParsing="false" selected="false">
-                                 <font>
-                                    <Font size="8.0" />
-                                 </font>
-                              </ToggleButton>
-                              <Button fx:id="clearButton" accessibleText="%accessible-text-clear-console" mnemonicParsing="false" onAction="#clearConsole">
-                                 <font>
-                                    <Font size="8.0" />
-                                 </font>
-                              </Button>
-                           </children>
-                           <BorderPane.margin>
-                              <Insets />
-                           </BorderPane.margin>
-                           <padding>
-                              <Insets bottom="2.0" left="4.0" right="4.0" top="2.0" />
-                           </padding>
-                        </HBox>
-                     </top>
-                  </BorderPane>
+                  <TabPane side="LEFT" tabClosingPolicy="UNAVAILABLE" SplitPane.resizableWithParent="false">
+                     <tabs>
+                        <Tab text="Concole">
+                           <content>
+                              <BorderPane fx:id="consoleRoot">
+                                 <center>
+                                    <WebView fx:id="console" minHeight="-1.0" minWidth="-1.0" prefHeight="-1.0" prefWidth="-1.0" />
+                                 </center>
+                                 <top>
+                                    <HBox alignment="TOP_RIGHT" spacing="5.0" style="-fx-border-style: hidden hidden solid hidden; -fx-border-color: #e0e0e0;" BorderPane.alignment="CENTER">
+                                       <children>
+                                          <ToggleButton fx:id="scrollLockButton" accessibleText="%accessible-text-scroll-lock" mnemonicParsing="false" selected="false">
+                                             <font>
+                                                <Font size="8.0" />
+                                             </font>
+                                          </ToggleButton>
+                                          <Button fx:id="clearButton" accessibleText="%accessible-text-clear-console" mnemonicParsing="false" onAction="#clearConsole">
+                                             <font>
+                                                <Font size="8.0" />
+                                             </font>
+                                          </Button>
+                                       </children>
+                                       <BorderPane.margin>
+                                          <Insets />
+                                       </BorderPane.margin>
+                                       <padding>
+                                          <Insets bottom="2.0" left="4.0" right="4.0" top="2.0" />
+                                       </padding>
+                                    </HBox>
+                                 </top>
+                              </BorderPane>
+                           </content>
+                        </Tab>
+                        <Tab text="Untitled Tab">
+                          <content>
+                            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="180.0" prefWidth="200.0" />
+                          </content>
+                        </Tab>
+                     </tabs>
+                  </TabPane>
                </items>
             </SplitPane>
          </items>
@@ -123,7 +138,7 @@
                         <KeyCodeCombination alt="UP" code="F7" control="UP" meta="UP" shift="UP" shortcut="UP" />
                      </accelerator>
                   </MenuItem>
-                  <MenuItem fx:id="previousEditorViewMenuItem" mnemonicParsing="false" onAction="#previousEditor" text="%menu-item-previous-editor" >
+                  <MenuItem fx:id="previousEditorViewMenuItem" mnemonicParsing="false" onAction="#previousEditor" text="%menu-item-previous-editor">
                      <accelerator>
                         <KeyCodeCombination alt="UP" code="F7" control="UP" meta="UP" shift="DOWN" shortcut="UP" />
                      </accelerator>

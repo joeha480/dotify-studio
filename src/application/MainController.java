@@ -50,9 +50,11 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -152,6 +154,10 @@ public class MainController {
 				ev.consume();
 			}
 		});
+		
+		tabPane.getChildrenUnmodifiable().addListener((ListChangeListener.Change<?> l)->{
+			updateRecents();
+		});
 		root.setOnDragOver(event->{
 			Dragboard db = event.getDragboard();
 			if (db.hasFiles() && canDropFiles(db.getFiles())) {
@@ -180,13 +186,7 @@ public class MainController {
 		});
 
 		clearConsole();
-		Settings.getSettings().getRecent().forEach(v->{
-			MenuItem mi = new MenuItem(v.getName());
-			mi.setOnAction(vx->{
-				addTab(v);
-			});
-			openRecentMenu.getItems().add(mi);
-		});
+		updateRecents();
 		console.setOnDragOver(event->event.consume());
 		exeService = Executors.newWorkStealingPool();
 		System.setOut(new PrintStream(new ConsoleStream("out")));
@@ -204,6 +204,17 @@ public class MainController {
 		urlProperty = new SimpleStringProperty();
 		//add menu bindings
 		setMenuBindings();
+	}
+	
+	private void updateRecents() {
+		openRecentMenu.getItems().clear();
+		Settings.getSettings().getRecent().stream().limit(5).forEach(v->{
+			MenuItem mi = new MenuItem(v.getName());
+			mi.setOnAction(vx->{
+				addTab(v);
+			});
+			openRecentMenu.getItems().add(mi);
+		});
 	}
 	
 	private void setMenuBindings() {
@@ -813,6 +824,7 @@ public class MainController {
 				EditorController prv = new EditorController();
 				tab.setOnClosed(ev ->  {
 					prv.closing();
+					updateRecents();
 				});
 				prv.load(source, FormatChecker.isXML(ai));
 				tab.setContent(prv);
@@ -820,6 +832,7 @@ public class MainController {
 				SourcePreviewController prv = new SourcePreviewController();
 				tab.setOnClosed(ev ->  {
 					prv.closing();
+					updateRecents();
 				});
 				prv.open(ai, options);
 				tab.setContent(prv);
@@ -828,6 +841,7 @@ public class MainController {
 	        PreviewController prv = new PreviewController();
 	        tab.setOnClosed(ev ->  {
 	        	prv.closing();
+	    		updateRecents();
 	        });
 	        prv.open(ai, options);
 	        tab.setContent(prv);	
