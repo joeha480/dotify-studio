@@ -11,6 +11,7 @@ import org.daisy.dotify.studio.api.DocumentPosition;
 import org.daisy.streamline.api.media.FileDetails;
 import org.daisy.streamline.api.validity.ValidationReport;
 
+import application.common.FileDetailsCatalog;
 import application.l10n.Messages;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;

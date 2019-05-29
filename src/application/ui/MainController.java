@@ -56,6 +56,7 @@ import org.w3c.dom.Element;
 
 import application.common.BindingStore;
 import application.common.FeatureSwitch;
+import application.common.FileDetailsCatalog;
 import application.common.Settings;
 import application.common.Settings.Keys;
 import application.l10n.Messages;
@@ -67,7 +68,6 @@ import application.ui.imports.ImportMergeView;
 import application.ui.library.SearchController;
 import application.ui.prefs.PreferencesView;
 import application.ui.preview.EditorWrapperController;
-import application.ui.preview.FileDetailsCatalog;
 import application.ui.preview.server.StartupDetails;
 import application.ui.template.TemplateView;
 import application.ui.tools.CharacterToolController;
@@ -945,7 +945,7 @@ public class MainController {
      * @return
      */
 	private static Stream<FormatDetails> newImportFormatDetailsStream() {
-		String outputFormat = FileDetailsCatalog.forMediaType(Settings.getSettings().getConvertTargetFormat()).getFormatName();
+		String outputFormat = Settings.getSettings().getConvertTargetFormat().getFormatName();
 		String locale = Settings.getSettings().getString(Keys.locale, Locale.getDefault().toLanguageTag());
 		TaskSystemFactoryMaker tgf = TaskSystemFactoryMaker.newInstance();
 		FormatDetailsProviderService detailsProvider = FormatDetailsProvider.newInstance();

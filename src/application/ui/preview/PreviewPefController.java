@@ -14,6 +14,7 @@ import org.daisy.dotify.studio.api.DocumentPosition;
 import org.daisy.streamline.api.media.FileDetails;
 import org.daisy.streamline.api.validity.ValidationReport;
 
+import application.common.FileDetailsCatalog;
 import application.l10n.Messages;
 import application.ui.preview.server.Start;
 import application.ui.preview.server.StartupDetails;

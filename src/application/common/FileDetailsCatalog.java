@@ -1,7 +1,8 @@
-package application.ui.preview;
+package application.common;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 
 import org.daisy.streamline.api.media.FileDetails;
 
@@ -74,44 +75,19 @@ public class FileDetailsCatalog {
 		throw new AssertionError("No instances allowed.");
 	}
 	
-	public static FileDetails forMediaType(String mediaType) {
+	static Optional<FileDetails> forMediaType(String mediaType) {
+		if (mediaType==null) {
+			return Optional.empty();
+		}
 		if (mediaType.equals(PEF_FORMAT.getMediaType())) {
-			return PEF_FORMAT;
+			return Optional.of(PEF_FORMAT);
 		} else if (mediaType.equals(XHTML_FORMAT.getMediaType())) {
-			return XHTML_FORMAT;
+			return Optional.of(XHTML_FORMAT);
 		} else if (mediaType.equals(FORMATTED_TEXT_FORMAT.getMediaType())) {
-			return FORMATTED_TEXT_FORMAT;
+			return Optional.of(FORMATTED_TEXT_FORMAT);
 		} else {
-			return new MediaTypeDetails(mediaType);
+			return Optional.empty();
 		}
 	}
 	
-	private static class MediaTypeDetails implements FileDetails {
-		private final String mediaType;
-		
-		private MediaTypeDetails(String mediaType) {
-			this.mediaType = mediaType;
-		}
-
-		@Override
-		public String getFormatName() {
-			return null;
-		}
-
-		@Override
-		public String getExtension() {
-			return null;
-		}
-
-		@Override
-		public String getMediaType() {
-			return mediaType;
-		}
-
-		@Override
-		public Map<String, Object> getProperties() {
-			return Collections.emptyMap();
-		}
-		
-	}
 }

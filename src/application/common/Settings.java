@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
+import org.daisy.streamline.api.media.FileDetails;
+
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 
@@ -143,8 +145,8 @@ public enum Settings {
 		p.remove(getRegKey(key));
 	}
 	
-	public String getConvertTargetFormat() {
-		return getString(Keys.convertTargetFormat, "application/x-pef+xml");
+	public FileDetails getConvertTargetFormat() {
+		return FileDetailsCatalog.forMediaType(getString(Keys.convertTargetFormat)).orElse(FileDetailsCatalog.PEF_FORMAT);
 	}
 	
 	public void setConvertTargetFormat(String mediaType) {

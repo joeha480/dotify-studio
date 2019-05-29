@@ -21,7 +21,7 @@ import org.daisy.streamline.api.validity.Validator;
 import org.daisy.streamline.api.validity.ValidatorFactoryMaker;
 import org.xml.sax.SAXException;
 
-import application.ui.preview.FileDetailsCatalog;
+import application.common.FileDetailsCatalog;
 
 final class PefExportActions {
 	

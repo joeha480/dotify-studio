@@ -16,13 +16,13 @@ import org.daisy.streamline.api.media.FormatIdentifier;
 
 import application.common.FactoryPropertiesAdapter;
 import application.common.FeatureSwitch;
+import application.common.FileDetailsCatalog;
 import application.common.LocaleEntry;
 import application.common.NiceName;
 import application.common.Settings;
 import application.common.Settings.Keys;
 import application.common.SupportedLocales;
 import application.l10n.Messages;
-import application.ui.preview.FileDetailsCatalog;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -69,7 +69,7 @@ public class GeneralSettingsController {
 							))
 					.collect(Collectors.toList())
 			);
-			FileDetails current = FileDetailsCatalog.forMediaType(Settings.getSettings().getConvertTargetFormat());
+			FileDetails current = Settings.getSettings().getConvertTargetFormat();
 			selectOutputFormat.getSelectionModel().select(new NiceName(current.getMediaType(), detailsProvider.getDetails(FormatIdentifier.with(current.getFormatName())).map(v2->v2.getDisplayName()).orElse(current.getFormatName())));
 			selectOutputFormat.valueProperty().addListener((ov, t0, t1)->Settings.getSettings().setConvertTargetFormat(t1.getKey()));
 		} else {

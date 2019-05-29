@@ -67,7 +67,7 @@ jar {
 
 repositories {
     mavenCentral()
-    //mavenLocal()
+    mavenLocal()
     maven { url "https://oss.sonatype.org/content/groups/staging" }
     //maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 }
@@ -109,6 +109,8 @@ dependencies {
 	runtimeOnly ('org.daisy.dotify:docs-to-html:1.0.0') {
 		exclude module: 'streamline-api'
 	}
+
+	runtimeOnly 'se.mtm.addons:mtm-dotify-addons:4.0.0'
 
 }
 

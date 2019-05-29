@@ -20,9 +20,9 @@ import org.daisy.dotify.studio.api.ExportActionProvider;
 import org.daisy.streamline.api.media.FileDetails;
 
 import application.common.FactoryPropertiesAdapter;
+import application.common.FileDetailsCatalog;
 import application.common.Settings;
 import application.common.Settings.Keys;
-import application.ui.preview.FileDetailsCatalog;
 import javafx.concurrent.Task;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
