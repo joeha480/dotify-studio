@@ -30,8 +30,6 @@ import java.util.stream.Stream;
 
 import org.daisy.braille.utils.pef.PEFFileMerger;
 import org.daisy.braille.utils.pef.PEFFileMerger.SortType;
-import org.daisy.braille.utils.pef.TextHandler;
-import org.daisy.dotify.api.table.TableCatalog;
 import org.daisy.dotify.studio.api.Converter;
 import org.daisy.dotify.studio.api.DocumentPosition;
 import org.daisy.dotify.studio.api.Editor;
@@ -63,7 +61,6 @@ import application.l10n.Messages;
 import application.ui.about.AboutView;
 import application.ui.find.FindController;
 import application.ui.find.FindView;
-import application.ui.imports.ImportBrailleView;
 import application.ui.imports.ImportMergeView;
 import application.ui.library.SearchController;
 import application.ui.prefs.PreferencesView;
