@@ -44,6 +44,7 @@ import org.daisy.streamline.api.details.FormatDetailsProvider;
 import org.daisy.streamline.api.details.FormatDetailsProviderService;
 import org.daisy.streamline.api.identity.IdentityProvider;
 import org.daisy.streamline.api.media.AnnotatedFile;
+import org.daisy.streamline.api.media.DefaultAnnotatedFile;
 import org.daisy.streamline.api.media.FormatIdentifier;
 import org.daisy.streamline.api.tasks.TaskSystemFactoryMaker;
 import org.daisy.streamline.api.validity.ValidationReport;
@@ -233,7 +234,7 @@ public class MainController {
 						if (file.getName().endsWith(".pef")) {
 							addTab(file);
 						} else {
-							selectTemplateAndOpen(file);
+							selectTemplateAndOpen(IdentityProvider.newInstance().identify(file));
 						}
 					});
 				}
@@ -838,6 +839,10 @@ public class MainController {
     }
 
     @FXML void showImportBrailleDialog() {
+		FileChooser fileChooser = new FileChooser();
+		fileChooser.setTitle(Messages.TITLE_IMPORT_BRAILLE_TEXT_DIALOG.localize());
+		importDialog(Optional.of("brf"), fileChooser);
+		/*
     	Window stage = root.getScene().getWindow();
     	FileChooser fileChooser = new FileChooser();
     	fileChooser.setTitle(Messages.TITLE_IMPORT_BRAILLE_TEXT_DIALOG.localize());
@@ -878,7 +883,7 @@ public class MainController {
 					logger.log(Level.WARNING, "Failed to create temporary file.", e1);
 				}
     		}
-    	}
+    	}*/
     }
     
     @FXML void showImportMergeDialog() {
@@ -978,9 +983,8 @@ public class MainController {
 	}
 
     @FXML void showImportDialog() {
-    	Window stage = root.getScene().getWindow();
-    	FileChooser fileChooser = new FileChooser();
-    	fileChooser.setTitle(Messages.TITLE_IMPORT_SOURCE_DOCUMENT_DIALOG.localize());
+		FileChooser fileChooser = new FileChooser();
+		fileChooser.setTitle(Messages.TITLE_IMPORT_SOURCE_DOCUMENT_DIALOG.localize());
 		List<FormatDetails> details = newImportFormatDetailsStream()
 				.collect(Collectors.toList());
 
@@ -988,27 +992,35 @@ public class MainController {
 		// All extensions are individually as well
 		fileChooser.getExtensionFilters().addAll(toExtensionFilterList(details.stream()));
 		fileChooser.getExtensionFilters().add(new ExtensionFilter(Messages.EXTENSION_FILTER_ALL_FILES.localize(), "*.*"));
-		Settings.getSettings().getLastOpenPath().ifPresent(v->fileChooser.setInitialDirectory(v));
-    	File selected = fileChooser.showOpenDialog(stage);
-    	if (selected!=null) {
-    		Settings.getSettings().setLastOpenPath(selected.getParentFile());
-    		selectTemplateAndOpen(selected);
-    	}
+    	importDialog(Optional.empty(), fileChooser);
     }
+
+	private void importDialog(Optional<String> format, FileChooser fileChooser) {
+		Window stage = root.getScene().getWindow();
+		Settings.getSettings().getLastOpenPath().ifPresent(v->fileChooser.setInitialDirectory(v));
+		File selected = fileChooser.showOpenDialog(stage);
+		if (selected!=null) {
+			Settings.getSettings().setLastOpenPath(selected.getParentFile());
+			selectTemplateAndOpen(format.map(v->(AnnotatedFile)DefaultAnnotatedFile.with(selected.toPath())
+					.extension(selected.toPath())
+					.formatName(v)
+					.build()).orElse(IdentityProvider.newInstance().identify(selected)));
+		}
+	}
 	
-	private void selectTemplateAndOpen(File selected) {
+	private void selectTemplateAndOpen(AnnotatedFile ai) {
 		TemplateView dialog = null;
-		if (Settings.getSettings().getShowTemplateDialogOnImport() && (dialog = new TemplateView(selected)).hasTemplates()) {
+		if (Settings.getSettings().getShowTemplateDialogOnImport() && (dialog = new TemplateView(ai.getPath().toFile())).hasTemplates()) {
 			// choose template
 			dialog.initOwner(root.getScene().getWindow());
 			dialog.initModality(Modality.APPLICATION_MODAL); 
 			dialog.showAndWait();
 			if (dialog.getSelectedConfiguration().isPresent()) {
 				// convert then add tab
-				addSourceTab(selected, dialog.getSelectedConfiguration().get());
+				addSourceTab(ai, dialog.getSelectedConfiguration().get());
 			}
 		} else {
-			addSourceTab(selected, Collections.emptyMap());
+			addSourceTab(ai, Collections.emptyMap());
 		}
 	}
 
@@ -1108,7 +1120,8 @@ public class MainController {
         	tab.setText(title);
         	setGraphic(title, tab);
         }
-        setupEditor(tab, args.getFile(), options);
+		AnnotatedFile ai = IdentityProvider.newInstance().identify(args.getFile());
+        setupEditor(tab, ai, options);
     }
     
 	private void setGraphic(String fileName, Tab t) {
@@ -1117,17 +1130,16 @@ public class MainController {
 				.getResource(source ? "resource-files/source-doc.png" : "resource-files/braille-doc.png")));
 	}
     
-    private void addSourceTab(File source, Map<String, Object> options) {
+    private void addSourceTab(AnnotatedFile ai, Map<String, Object> options) {
         Tab tab = new Tab();
-        setGraphic(source.getName(), tab);
-        tab.setText(source.getName());
-        setupEditor(tab, source, options);
+        setGraphic(ai.getPath().toFile().getName(), tab);
+        tab.setText(ai.getPath().toFile().getName());
+        setupEditor(tab, ai, options);
         tabPane.getTabs().add(tab);
         tabPane.getSelectionModel().select(tab);
     }
     
-    private void setupEditor(Tab tab, File source, Map<String, Object> options) {
-		AnnotatedFile ai = IdentityProvider.newInstance().identify(source);
+    private void setupEditor(Tab tab, AnnotatedFile ai, Map<String, Object> options) {
 		EditorWrapperController prv = EditorWrapperController.newInstance(ai, options);
 		tab.setOnClosed(ev ->  {
 			prv.closing();
@@ -1135,7 +1147,7 @@ public class MainController {
 		tab.setContent(prv);
 		tab.setOnCloseRequest(ev->{
 			if (((Editor)tab.getContent()).isModified()) {
-				Alert alert = new Alert(AlertType.CONFIRMATION, Messages.MESSAGE_CONFIRM_CLOSE_UNSAVED_CHANGES.localize(source.getName()), ButtonType.YES, ButtonType.CANCEL);
+				Alert alert = new Alert(AlertType.CONFIRMATION, Messages.MESSAGE_CONFIRM_CLOSE_UNSAVED_CHANGES.localize(ai.getPath().toFile().getName()), ButtonType.YES, ButtonType.CANCEL);
 				Optional<ButtonType> res = alert.showAndWait();
 				if (res.map(v->(Boolean)!v.equals(ButtonType.YES)).orElse(true)) {
 					ev.consume();
