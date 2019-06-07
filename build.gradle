@@ -65,7 +65,7 @@ jar {
 
 repositories {
     mavenCentral()
-    //mavenLocal()
+    mavenLocal()
     maven { url "https://oss.sonatype.org/content/groups/staging" }
     //maven { url "https://oss.sonatype.org/content/repositories/snapshots" }
 }
@@ -98,7 +98,7 @@ dependencies {
 	runtimeOnly ('org.daisy.dotify:dotify.task.impl:5.0.0') {
 		exclude module: 'Saxon-HE'
 	}
-	runtimeOnly 'org.daisy.braille:braille-utils.impl:7.0.0'
+	runtimeOnly 'org.daisy.braille:braille-utils.impl:7.1.0-SNAPSHOT'
 
 	runtimeOnly ('org.daisy.streamline:format-catalog:1.1.0') {
 		exclude module: 'streamline-api'
