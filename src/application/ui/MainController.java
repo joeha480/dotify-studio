@@ -43,6 +43,8 @@ import org.daisy.streamline.api.details.FormatDetailsProviderService;
 import org.daisy.streamline.api.identity.IdentityProvider;
 import org.daisy.streamline.api.media.AnnotatedFile;
 import org.daisy.streamline.api.media.DefaultAnnotatedFile;
+import org.daisy.streamline.api.media.DefaultFileDetails;
+import org.daisy.streamline.api.media.FileDetails;
 import org.daisy.streamline.api.media.FormatIdentifier;
 import org.daisy.streamline.api.tasks.TaskSystemFactoryMaker;
 import org.daisy.streamline.api.validity.ValidationReport;
@@ -838,7 +840,7 @@ public class MainController {
     @FXML void showImportBrailleDialog() {
 		FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle(Messages.TITLE_IMPORT_BRAILLE_TEXT_DIALOG.localize());
-		importDialog(Optional.of("brf"), fileChooser);
+		importDialog(Optional.of(new DefaultFileDetails.Builder().formatName("brf").mediaType("text/plain").build()), fileChooser);
 		/*
     	Window stage = root.getScene().getWindow();
     	FileChooser fileChooser = new FileChooser();
@@ -992,7 +994,7 @@ public class MainController {
     	importDialog(Optional.empty(), fileChooser);
     }
 
-	private void importDialog(Optional<String> format, FileChooser fileChooser) {
+	private void importDialog(Optional<FileDetails> format, FileChooser fileChooser) {
 		Window stage = root.getScene().getWindow();
 		Settings.getSettings().getLastOpenPath().ifPresent(v->fileChooser.setInitialDirectory(v));
 		File selected = fileChooser.showOpenDialog(stage);
@@ -1000,7 +1002,9 @@ public class MainController {
 			Settings.getSettings().setLastOpenPath(selected.getParentFile());
 			selectTemplateAndOpen(format.map(v->(AnnotatedFile)DefaultAnnotatedFile.with(selected.toPath())
 					.extension(selected.toPath())
-					.formatName(v)
+					.formatName(v.getFormatName())
+					.mediaType(v.getMediaType())
+					.properties(v.getProperties())
 					.build()).orElse(IdentityProvider.newInstance().identify(selected)));
 		}
 	}
