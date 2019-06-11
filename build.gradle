@@ -8,6 +8,7 @@ buildscript {
 plugins {
 	id 'java'
 	id 'application'
+	id 'org.beryx.runtime' version '1.1.7'
 	id 'org.openjfx.javafxplugin' version '0.0.7'
 	id 'maven-publish'
 	id 'signing'
@@ -245,6 +246,27 @@ publishing {
 			}
 		}
 	}
+}
+
+import org.gradle.internal.os.OperatingSystem
+def os = OperatingSystem.current().getFamilyName()
+
+runtime {
+	options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+	modules = ['java.base',
+			'java.datatransfer',
+			'java.desktop',
+			'java.logging',
+			'java.prefs',
+			'java.scripting',
+			'java.xml',
+			'jdk.jsobject',
+			'jdk.unsupported',
+			'jdk.xml.dom',
+			'jdk.localedata'
+	]
+	imageDir = file("$buildDir/image/$name-${version}")
+	imageZip = file("$buildDir/distributions/$name-${version}-${os}.zip")
 }
 
 wrapper {
