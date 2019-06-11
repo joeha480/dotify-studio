@@ -38,14 +38,6 @@ import javafx.stage.WindowEvent;
 public class MainFx extends Application {
 	private static final Logger logger = Logger.getLogger(MainFx.class.getCanonicalName());
 
-	/**
-	 * Starts the application.
-	 * @param args the arguments
-	 */
-	public static void main(String[] args) {
-		launch(args);
-	}
-
 	@Override
 	public void start(Stage primaryStage) throws IOException {
 		try {

@@ -8,12 +8,13 @@ buildscript {
 plugins {
 	id 'java'
 	id 'application'
+	id 'org.openjfx.javafxplugin' version '0.0.7'
 	id 'maven-publish'
 	id 'signing'
 	id 'org.ajoberstar.grgit' version '3.1.1'
 }
 
-mainClassName = "application.ui.MainFx"
+mainClassName = "application.ui.Launcher"
 compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 javadoc {
@@ -21,8 +22,8 @@ javadoc {
 	options.source = 8
 	options.links('https://docs.oracle.com/javase/8/docs/api/');
 }
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
+sourceCompatibility = '11'
+targetCompatibility = '11'
  
 def repoRevision = grgit.status().clean ? grgit.head().getId() 
 			: (System.getenv("REPO_REVISION")!=null ? System.getenv("REPO_REVISION") : repositoryRevision)
@@ -46,6 +47,10 @@ sourceSets {
 			srcDir 'test'
 		}
 	}
+}
+
+javafx {
+	modules = ['javafx.controls', 'javafx.fxml', 'javafx.web']
 }
 
 jar {
@@ -108,6 +113,7 @@ dependencies {
 	
 	runtimeOnly ('org.daisy.dotify:docs-to-html:1.0.0') {
 		exclude module: 'streamline-api'
+		exclude module: 'xml-apis'
 	}
 
 }
