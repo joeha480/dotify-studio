@@ -13,6 +13,7 @@ plugins {
 	id 'maven-publish'
 	id 'signing'
 	id 'org.ajoberstar.grgit' version '3.1.1'
+	id "de.inetsoftware.setupbuilder" version "4.8.6"
 }
 
 mainClassName = "application.ui.Launcher"
@@ -268,6 +269,41 @@ runtime {
 	imageDir = file("$buildDir/image/$name-${version}")
 	imageZip = file("$buildDir/distributions/$name-${version}-${os}.zip")
 }
+
+
+setupBuilder {
+	vendor = 'DAISY Consortium'
+	application = releaseName
+	appIdentifier = name
+	description = appDescription
+	//licenseFile = 'license.txt'
+	// icons in different sizes for different usage. you can also use a single *.ico or *.icns file
+	icons = ['build-resources/app-icon.ico']
+	// files for all platforms
+	from ("$buildDir/image/$name-${version}") {
+		include '**/*'
+	}
+	failOnEmptyFrom=true
+}
+
+configure( [msi] ) {
+	// included to reduce the build time
+	languages = ['en-US']
+	wxsTemplate = './build-resources/template.wxs'
+	
+	doFirst {
+		setupBuilder {
+			desktopStarter {
+				displayName = releaseName
+				description = appDescription
+				executable = "bin\\dotify-studio.bat"
+				location = "ApplicationMenu"
+			}
+		}
+	}
+}
+
+msi.dependsOn('runtime')
 
 wrapper {
     distributionType = Wrapper.DistributionType.ALL
