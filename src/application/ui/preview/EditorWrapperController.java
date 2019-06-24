@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import org.daisy.braille.utils.pef.PEFBook;
 import org.daisy.dotify.studio.api.Converter;
 import org.daisy.dotify.studio.api.DocumentPosition;
 import org.daisy.dotify.studio.api.Editor;
@@ -228,6 +229,11 @@ public class EditorWrapperController extends BorderPane implements Editor {
 	@Override
 	public String getSelectedText() {
 		return impl.getSelectedText();
+	}
+	
+	@Override
+	public Optional<PEFBook> getMetadata() {
+		return impl.getMetadata();
 	}
 
 }

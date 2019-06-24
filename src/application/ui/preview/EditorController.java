@@ -29,6 +29,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
+import org.daisy.braille.utils.pef.PEFBook;
 import org.daisy.dotify.common.xml.XMLTools;
 import org.daisy.dotify.common.xml.XMLToolsException;
 import org.daisy.dotify.common.xml.XmlEncodingDetectionException;
@@ -752,6 +753,11 @@ public class EditorController extends BorderPane implements OpenableEditor {
 	@Override
 	public String getSelectedText() {
 		return codeArea.getSelectedText();
+	}
+
+	@Override
+	public Optional<PEFBook> getMetadata() {
+		return Optional.empty();
 	}
 
 }

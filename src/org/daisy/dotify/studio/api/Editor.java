@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
+import org.daisy.braille.utils.pef.PEFBook;
 import org.daisy.streamline.api.media.FileDetails;
 import org.daisy.streamline.api.validity.ValidationReport;
 
@@ -204,5 +205,7 @@ public interface Editor extends Searchable {
 	 * @return true if the location could be scrolled to, false otherwise
 	 */
 	public boolean scrollTo(DocumentPosition location);
+	
+	public Optional<PEFBook> getMetadata();
 
 }

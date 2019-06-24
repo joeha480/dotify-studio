@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.daisy.braille.utils.pef.PEFBook;
 import org.daisy.dotify.studio.api.DocumentPosition;
 import org.daisy.dotify.studio.api.Editor;
 import org.daisy.dotify.studio.api.ExportAction;
@@ -347,6 +348,11 @@ public class SourcePreviewController extends BorderPane implements Editor {
 	@Override
 	public String getSelectedText() {
 		return getCurrentEditor().map(v->v.getSelectedText()).orElse("");
+	}
+	
+	@Override
+	public Optional<PEFBook> getMetadata() {
+		return getCurrentEditor().flatMap(v->v.getMetadata());
 	}
 	
 }

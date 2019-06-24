@@ -55,6 +55,7 @@
                      </top>
                   </BorderPane>
                   </Tab>
+                  <Tab text="!properties!" fx:id="propertiesTab"></Tab>
                   </TabPane>
                </items>
             </SplitPane>

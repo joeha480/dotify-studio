@@ -179,5 +179,14 @@ public class PreviewPefController extends AbstractHtmlController {
 				.filter(v->v.equals(location))
 				.count()>0;
 	}
+	
+	@Override
+	public Optional<PEFBook> getMetadata() {
+		if (start!=null) {
+			return Optional.ofNullable(start.getMainPage()).flatMap(v->v.getBookReaderResult()).map(v->v.getBook());
+		} else {
+			return Optional.empty();
+		}
+	}
 
 }

@@ -69,6 +69,7 @@ import application.ui.prefs.PreferencesView;
 import application.ui.preview.EditorWrapperController;
 import application.ui.preview.FileDetailsCatalog;
 import application.ui.preview.server.StartupDetails;
+import application.ui.properties.PropertiesController;
 import application.ui.template.TemplateView;
 import application.ui.tools.CharacterToolController;
 import application.ui.validation.ValidationController;
@@ -162,7 +163,9 @@ public class MainController {
 	@FXML private MenuItem zoomOutMenuItem;
 	@FXML private Tab consoleTab;
 	@FXML private Tab validationTab;
+	@FXML private Tab propertiesTab;
 	private ValidationController validationController;
+	private PropertiesController propertiesController;
 	private FindView findDialog;
 	private final BindingStore tabBindings = new BindingStore();
 	private final BindingStore rootBindings = new BindingStore();
@@ -190,6 +193,8 @@ public class MainController {
 		SplitPane.setResizableWithParent(toolsPane, false);
 		validationController = new ValidationController();
 		validationTab.setContent(validationController);
+		propertiesController = new PropertiesController();
+		propertiesTab.setContent(propertiesController);
 		toolsPane.addEventHandler(KeyEvent.KEY_RELEASED, ev-> {
 			if (CTRL_F4.match(ev)) {
 				Tab t = toolsPane.getSelectionModel().getSelectedItem();
@@ -415,6 +420,7 @@ public class MainController {
 		exportMenu.getItems().clear();
 		topMenuBar.getMenus().remove(convertMenu);
 		validationController.clear();
+		propertiesController.clear();
 		if (ov!=null && ov.getContent() instanceof Editor) {
 			Editor p = ((Editor)ov.getContent());
 			p.getConverter().ifPresent(v->{
@@ -460,6 +466,9 @@ public class MainController {
 					validationController.clear();
 				}
 			}
+			p.getMetadata().ifPresent(
+					propertiesController::setModel
+				);
 			if (p.getConverter().isPresent()) {
 				Converter v = p.getConverter().get();
 				showConverterMenuItem.selectedProperty().bindBidirectional(v.showOptionsProperty());

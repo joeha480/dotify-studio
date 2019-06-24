@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import org.daisy.braille.utils.pef.PEFBook;
 import org.daisy.dotify.studio.api.DocumentPosition;
 import org.daisy.streamline.api.media.FileDetails;
 import org.daisy.streamline.api.validity.ValidationReport;
@@ -81,6 +82,11 @@ public class PreviewHtmlController extends AbstractHtmlController {
 	@Override
 	public boolean scrollTo(DocumentPosition msg) {
 		return false;
+	}
+	
+	@Override
+	public Optional<PEFBook> getMetadata() {
+		return Optional.empty();
 	}
 
 }
