@@ -66,12 +66,14 @@ public class FolderToolController extends BorderPane {
 	}
 	
 	public void addPath(Path p) {
-		FileTreeItem depNode = new FileTreeItem(
-				new PathInfo(p, true), 
-				new ImageView(depIcon)
-			);
-		rootNode.getChildren().add(depNode);
-		setPath(p, depNode);
+		if (Files.isDirectory(p)) {
+			FileTreeItem depNode = new FileTreeItem(
+					new PathInfo(p, true), 
+					new ImageView(depIcon)
+				);
+			rootNode.getChildren().add(depNode);
+			setPath(p, depNode);
+		}
 	}
 	
 	public void removePath(Path p) {
@@ -98,11 +100,8 @@ public class FolderToolController extends BorderPane {
 						if (nv.booleanValue()) {
 							empLeaf.getChildren().clear();
 							setPath(v, empLeaf);
-						} else {
-							//empLeaf.getChildren().add(new FileTreeItem());
 						}
 					});
-					//empLeaf.getChildren().add(new FileTreeItem());
 				}
 				node.getChildren().add(empLeaf);
 			});

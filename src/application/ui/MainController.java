@@ -187,6 +187,7 @@ public class MainController {
 	static final KeyCombination CTRL_MINUS = new KeyCodeCombination(KeyCode.MINUS, KeyCombination.CONTROL_DOWN);
 	static final KeyCombination CTRL_PLUS = new KeyCodeCombination(KeyCode.PLUS, KeyCombination.CONTROL_DOWN);
 	private final ExportActionMaker exportActions = ExportActionMaker.newInstance();
+	private FolderToolController folderToolController = null;
 
 	@FXML void initialize() {
 		toolsPane = new TabPane();
@@ -235,6 +236,8 @@ public class MainController {
 					Platform.runLater(() -> {
 						if (file.getName().endsWith(".pef")) {
 							addTab(file);
+						} else if (file.isDirectory()) {
+							getFolderToolController().addPath(file.toPath());
 						} else {
 							selectTemplateAndOpen(file);
 						}
@@ -298,12 +301,7 @@ public class MainController {
 			}, showCharacterToolMenuItem));
 		}
 		showFolderToolMenuItem.selectedProperty().addListener(makeLeftToolsChangeListener(()->{
-		Tab ret = new Tab("!Folder!", new FolderToolController(v-> {	
-			System.out.println("Selected " + v);
-			addTab(v.toFile());
-		}
-		)
-		);
+		Tab ret = new Tab("!Folder!", getFolderToolController());
 		ret.setUserData(showFolderToolMenuItem);
 		return ret;
 		}, showFolderToolMenuItem));
@@ -335,6 +333,17 @@ public class MainController {
 				.or(noTabBinding)
 			);
 		
+	}
+	
+	private synchronized FolderToolController getFolderToolController() {
+		if (folderToolController==null) {
+			folderToolController = new FolderToolController(v-> {	
+				System.out.println("Selected " + v);
+				addTab(v.toFile());
+			}
+			);
+		}
+		return folderToolController;
 	}
 	
 	private ChangeListener<Boolean> makeBottomToolsChangeListener(Tab tab) {
@@ -539,7 +548,11 @@ public class MainController {
 			.map(val -> "."+val.toLowerCase())
 			.collect(Collectors.toSet());
 		for (File f : files) {
-			if (!(f.getName().endsWith(".pef")||exts.contains(getExtension(f.getName().toLowerCase())))) {
+			if (!(
+					f.getName().endsWith(".pef")
+					||exts.contains(getExtension(f.getName().toLowerCase()))
+					||f.isDirectory()
+				)) {
 				return false;
 			}
 		}
@@ -1132,7 +1145,7 @@ public class MainController {
     
     private void setupEditor(Tab tab, File source, Map<String, Object> options) {
 		AnnotatedFile ai = IdentityProvider.newInstance().identify(source);
-		EditorWrapperController prv = EditorWrapperController.newInstance(ai, options);
+		EditorWrapperController prv = EditorWrapperController.newInstance(ai, options).orElseThrow(RuntimeException::new);
 		tab.setOnClosed(ev ->  {
 			prv.closing();
 		});
