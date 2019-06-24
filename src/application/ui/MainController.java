@@ -72,6 +72,7 @@ import application.ui.preview.FileDetailsCatalog;
 import application.ui.preview.server.StartupDetails;
 import application.ui.template.TemplateView;
 import application.ui.tools.CharacterToolController;
+import application.ui.tools.FolderToolController;
 import application.ui.validation.ValidationController;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -147,6 +148,7 @@ public class MainController {
 	@FXML private CheckMenuItem showConverterMenuItem;
 	@FXML private CheckMenuItem showSearchMenuItem;
 	@FXML private CheckMenuItem showCharacterToolMenuItem;
+	@FXML private CheckMenuItem showFolderToolMenuItem;
 	@FXML private CheckMenuItem showConsoleMenuItem;
 	@FXML private CheckMenuItem showValdationMenuItem;
 	@FXML private CheckMenuItem watchSourceMenuItem;
@@ -295,6 +297,17 @@ public class MainController {
 			return ret;
 			}, showCharacterToolMenuItem));
 		}
+		showFolderToolMenuItem.selectedProperty().addListener(makeLeftToolsChangeListener(()->{
+		Tab ret = new Tab("!Folder!", new FolderToolController(v-> {	
+			System.out.println("Selected " + v);
+			addTab(v.toFile());
+		}
+		)
+		);
+		ret.setUserData(showFolderToolMenuItem);
+		return ret;
+		}, showFolderToolMenuItem));
+		
 		showConsoleMenuItem.selectedProperty().addListener(makeBottomToolsChangeListener(consoleTab));
 		consoleTab.onClosedProperty().set(makeBottomToolsTabCloseHandler(showConsoleMenuItem));
 		showValdationMenuItem.selectedProperty().addListener(makeBottomToolsChangeListener(validationTab));

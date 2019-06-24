@@ -151,6 +151,7 @@
                         <KeyCodeCombination alt="DOWN" code="L" control="UP" meta="UP" shift="DOWN" shortcut="UP" />
                      </accelerator></CheckMenuItem>
                   <CheckMenuItem fx:id="showCharacterToolMenuItem" text="%menu-item-character-tool"></CheckMenuItem>
+                  <CheckMenuItem fx:id="showFolderToolMenuItem" text="!Folder!"></CheckMenuItem>
                   <CheckMenuItem fx:id="showConsoleMenuItem" mnemonicParsing="false" selected="true" text="%menu-item-show-console">
                      <accelerator>
                         <KeyCodeCombination alt="DOWN" code="C" control="UP" meta="UP" shift="DOWN" shortcut="UP" />
