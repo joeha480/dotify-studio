@@ -110,6 +110,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.web.WebView;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Modality;
@@ -238,6 +239,7 @@ public class MainController {
 							addTab(file);
 						} else if (file.isDirectory()) {
 							getFolderToolController().addPath(file.toPath());
+							showFolderToolMenuItem.selectedProperty().set(true);
 						} else {
 							selectTemplateAndOpen(file);
 						}
@@ -851,6 +853,21 @@ public class MainController {
     	if (selected!=null) {
     		Settings.getSettings().setLastOpenPath(selected.getParentFile());
     		addTab(selected);
+    	}
+    }
+    
+    @FXML void showOpenFolderDialog() {
+    	Window stage = root.getScene().getWindow();
+    	DirectoryChooser dirChooser = new DirectoryChooser();
+    	//TODO: Messages.key
+    	dirChooser.setTitle(Messages.TITLE_OPEN_DIALOG.localize());
+    	//TODO: use own location
+    	Settings.getSettings().getLastOpenPath().ifPresent(v->dirChooser.setInitialDirectory(v));
+    	File selected = dirChooser.showDialog(stage);
+    	if (selected!=null) {
+    		Settings.getSettings().setLastOpenPath(selected);
+    		getFolderToolController().addPath(selected.toPath());
+    		showFolderToolMenuItem.selectedProperty().set(true);
     	}
     }
 

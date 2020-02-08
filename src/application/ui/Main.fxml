@@ -71,6 +71,8 @@
                         <KeyCodeCombination alt="UP" code="O" control="UP" meta="UP" shift="UP" shortcut="DOWN" />
                      </accelerator>
                   </MenuItem>
+                  <MenuItem mnemonicParsing="false" onAction="#showOpenFolderDialog" text="!open-folder!">
+                  </MenuItem>
                   <SeparatorMenuItem mnemonicParsing="false" />
                   <MenuItem fx:id="saveMenuItem" mnemonicParsing="false" onAction="#save" text="%menu-item-save">
                      <accelerator>

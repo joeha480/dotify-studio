@@ -62,7 +62,6 @@ public class FolderToolController extends BorderPane {
 				}
 			}
 		});
-		addPath(Paths.get("c:\\Data\\Git"));
 	}
 	
 	public void addPath(Path p) {
