@@ -3,7 +3,6 @@ package application.ui.tools;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -17,12 +16,17 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 
 /**
  * Provides a controller for the search view.
  * @author Joel Håkansson
- *
+ * MVF (minimal viable feature):
+ * - remove paths (DONE!)
+ * - sync with file system
+ * - cleanup naming, icons etc
+ * - 
  */
 public class FolderToolController extends BorderPane {
 	private static final Logger logger = Logger.getLogger(FolderToolController.class.getCanonicalName());
@@ -62,6 +66,17 @@ public class FolderToolController extends BorderPane {
 				}
 			}
 		});
+		tree.setOnKeyPressed(t->{
+			if (t.getCode()==KeyCode.DELETE) {
+				//TODO: null check
+				PathInfo pathInfo = tree.getSelectionModel().getSelectedItem().getValue();
+				if (pathInfo.isRoot()) {
+					removePath(pathInfo);
+				} else {
+					// ask to delete file
+				}
+			}
+		});
 	}
 	
 	public void addPath(Path p) {
@@ -75,7 +90,7 @@ public class FolderToolController extends BorderPane {
 		}
 	}
 	
-	public void removePath(Path p) {
+	public void removePath(PathInfo p) {
 		rootNode.getChildren().removeIf(v->v.getValue().equals(p));
 	}
 	
@@ -112,26 +127,30 @@ public class FolderToolController extends BorderPane {
 	
 	private static class PathInfo {
 		private final Path path;
-		private final boolean fullPath;
+		private final boolean root;
 		
 		PathInfo(Path p) {
 			this.path = p;
-			this.fullPath = false;
+			this.root = false;
 		}
 		
-		PathInfo(Path p, boolean fullPath) {
+		PathInfo(Path p, boolean root) {
 			this.path = p;
-			this.fullPath = fullPath;
+			this.root = root;
 		}
 		
 
 		@Override
 		public String toString() {
-			return fullPath?path.toString():path.getName(path.getNameCount()-1).toString();
+			return root?path.toString():path.getName(path.getNameCount()-1).toString();
 		}
 
 		public Path getPath() {
 			return path;
+		}
+		
+		public boolean isRoot() {
+			return root;
 		}
 		
 	}
