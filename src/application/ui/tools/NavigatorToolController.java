@@ -9,6 +9,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import application.l10n.Messages;
+import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -20,21 +21,21 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.BorderPane;
 
 /**
- * Provides a controller for the search view.
+ * Provides a controller for the navigator view.
  * @author Joel Håkansson
  * MVF (minimal viable feature):
  * - remove paths (DONE!)
- * - sync with file system
- * - cleanup naming, icons etc
+ * - sync with file system (YES, manually)
+ * - cleanup naming (OK), icons etc
  * - 
  */
-public class FolderToolController extends BorderPane {
-	private static final Logger logger = Logger.getLogger(FolderToolController.class.getCanonicalName());
+public class NavigatorToolController extends BorderPane {
+	private static final Logger logger = Logger.getLogger(NavigatorToolController.class.getCanonicalName());
 	private static final Node rootIcon = new ImageView(
-			new Image(FolderToolController.class.getResourceAsStream("folder_16.png"))
+			new Image(NavigatorToolController.class.getResourceAsStream("folder_16.png"))
 			);
 	private static final Image depIcon = 
-			new Image(FolderToolController.class.getResourceAsStream("department.png"));
+			new Image(NavigatorToolController.class.getResourceAsStream("department.png"));
 	TreeItem<PathInfo> rootNode = 
 			new FileTreeItem();
 	@FXML TreeView<PathInfo> tree;
@@ -43,9 +44,9 @@ public class FolderToolController extends BorderPane {
 	/**
 	 * Creates a new search view controller.
 	 */
-	public FolderToolController(Consumer<Path> action) {
+	public NavigatorToolController(Consumer<Path> action) {
 		try {
-			FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("FolderTool.fxml"), Messages.getBundle());
+			FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("NavigatorTool.fxml"), Messages.getBundle());
 			fxmlLoader.setRoot(this);
 			fxmlLoader.setController(this);
 			fxmlLoader.load();
@@ -57,7 +58,6 @@ public class FolderToolController extends BorderPane {
 	
 	@FXML void initialize() {
 		tree.setShowRoot(false);
-		tree.setRoot(rootNode);
 		tree.setOnMouseClicked(ev->{
 			if (ev.getClickCount()>=2) {
 				TreeItem<PathInfo> item = tree.getSelectionModel().getSelectedItem();
@@ -77,14 +77,20 @@ public class FolderToolController extends BorderPane {
 				}
 			}
 		});
+		setRootNode(rootNode);
 	}
 	
+	private void setRootNode(TreeItem<PathInfo> root) {
+		tree.setRoot(root);
+	}
+
 	public void addPath(Path p) {
 		if (Files.isDirectory(p)) {
 			FileTreeItem depNode = new FileTreeItem(
 					new PathInfo(p, true), 
 					new ImageView(depIcon)
 				);
+			depNode.expandedProperty().addListener(createChangeListener(p, depNode));
 			rootNode.getChildren().add(depNode);
 			setPath(p, depNode);
 		}
@@ -110,12 +116,7 @@ public class FolderToolController extends BorderPane {
 			.forEach(v-> {
 				FileTreeItem empLeaf = new FileTreeItem(v);
 				if (Files.isDirectory(v)) {
-					empLeaf.expandedProperty().addListener((o, ov, nv)->{
-						if (nv.booleanValue()) {
-							empLeaf.getChildren().clear();
-							setPath(v, empLeaf);
-						}
-					});
+					empLeaf.expandedProperty().addListener(createChangeListener(v, empLeaf));
 				}
 				node.getChildren().add(empLeaf);
 			});
@@ -123,6 +124,15 @@ public class FolderToolController extends BorderPane {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+	
+	private static ChangeListener<? super Boolean> createChangeListener(Path v, FileTreeItem empLeaf) {
+		return (o, ov, nv)->{
+			if (nv.booleanValue()) {
+				empLeaf.getChildren().clear();
+				setPath(v, empLeaf);
+			}
+		};
 	}
 	
 	private static class PathInfo {

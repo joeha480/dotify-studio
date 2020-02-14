@@ -72,7 +72,7 @@ import application.ui.preview.FileDetailsCatalog;
 import application.ui.preview.server.StartupDetails;
 import application.ui.template.TemplateView;
 import application.ui.tools.CharacterToolController;
-import application.ui.tools.FolderToolController;
+import application.ui.tools.NavigatorToolController;
 import application.ui.validation.ValidationController;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -188,7 +188,7 @@ public class MainController {
 	static final KeyCombination CTRL_MINUS = new KeyCodeCombination(KeyCode.MINUS, KeyCombination.CONTROL_DOWN);
 	static final KeyCombination CTRL_PLUS = new KeyCodeCombination(KeyCode.PLUS, KeyCombination.CONTROL_DOWN);
 	private final ExportActionMaker exportActions = ExportActionMaker.newInstance();
-	private FolderToolController folderToolController = null;
+	private NavigatorToolController folderToolController = null;
 
 	@FXML void initialize() {
 		toolsPane = new TabPane();
@@ -303,7 +303,7 @@ public class MainController {
 			}, showCharacterToolMenuItem));
 		}
 		showFolderToolMenuItem.selectedProperty().addListener(makeLeftToolsChangeListener(()->{
-		Tab ret = new Tab("!Folder!", getFolderToolController());
+		Tab ret = new Tab(Messages.TAB_NAVIGATOR_TOOL.localize(), getFolderToolController());
 		ret.setUserData(showFolderToolMenuItem);
 		return ret;
 		}, showFolderToolMenuItem));
@@ -337,9 +337,9 @@ public class MainController {
 		
 	}
 	
-	private synchronized FolderToolController getFolderToolController() {
+	private synchronized NavigatorToolController getFolderToolController() {
 		if (folderToolController==null) {
-			folderToolController = new FolderToolController(v-> {	
+			folderToolController = new NavigatorToolController(v-> {	
 				System.out.println("Selected " + v);
 				addTab(v.toFile());
 			}

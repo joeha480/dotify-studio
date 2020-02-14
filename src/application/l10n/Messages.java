@@ -141,6 +141,7 @@ public enum Messages {
 	TAB_PREVIEW("tab-preview"),
 	TAB_LIBRARY("tab-library"),
 	TAB_CHARACTER_TOOL("tab-character-tool"),
+	TAB_NAVIGATOR_TOOL("tab-navigator-tool"),
 	TAB_HELP_CONTENTS("tab-help-contents"),
 	TOOLTIP_8_DOT_SUPPORT("tooltip-8-dot-support"),
 	TOOLTIP_6_DOT_ONLY("tooltip-6-dot-only"),
