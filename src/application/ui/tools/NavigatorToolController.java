@@ -31,11 +31,9 @@ import javafx.scene.layout.BorderPane;
  */
 public class NavigatorToolController extends BorderPane {
 	private static final Logger logger = Logger.getLogger(NavigatorToolController.class.getCanonicalName());
-	private static final Node rootIcon = new ImageView(
-			new Image(NavigatorToolController.class.getResourceAsStream("folder_16.png"))
-			);
-	private static final Image depIcon = 
-			new Image(NavigatorToolController.class.getResourceAsStream("department.png"));
+	private static final Image drawerIcon = new Image(NavigatorToolController.class.getResourceAsStream("resource-files/drawer.png")); 
+	private static final Image folderIcon = new Image(NavigatorToolController.class.getResourceAsStream("resource-files/folder.png"));
+	private static final Image fileIcon = new Image(NavigatorToolController.class.getResourceAsStream("resource-files/file.png"));
 	TreeItem<PathInfo> rootNode = 
 			new FileTreeItem();
 	@FXML TreeView<PathInfo> tree;
@@ -60,10 +58,7 @@ public class NavigatorToolController extends BorderPane {
 		tree.setShowRoot(false);
 		tree.setOnMouseClicked(ev->{
 			if (ev.getClickCount()>=2) {
-				TreeItem<PathInfo> item = tree.getSelectionModel().getSelectedItem();
-				if (item!=null && item.getValue()!=null && !Files.isDirectory(item.getValue().getPath())) {
-					action.accept(item.getValue().getPath());
-				}
+				openSelectedItem();
 			}
 		});
 		tree.setOnKeyPressed(t->{
@@ -75,9 +70,18 @@ public class NavigatorToolController extends BorderPane {
 				} else {
 					// ask to delete file
 				}
+			} else if (t.getCode()==KeyCode.ENTER) {
+				openSelectedItem();
 			}
 		});
 		setRootNode(rootNode);
+	}
+	
+	private void openSelectedItem() {
+		TreeItem<PathInfo> item = tree.getSelectionModel().getSelectedItem();
+		if (item!=null && item.getValue()!=null && !Files.isDirectory(item.getValue().getPath())) {
+			action.accept(item.getValue().getPath());
+		}
 	}
 	
 	private void setRootNode(TreeItem<PathInfo> root) {
@@ -88,7 +92,7 @@ public class NavigatorToolController extends BorderPane {
 		if (Files.isDirectory(p)) {
 			FileTreeItem depNode = new FileTreeItem(
 					new PathInfo(p, true), 
-					new ImageView(depIcon)
+					new ImageView(drawerIcon)
 				);
 			depNode.expandedProperty().addListener(createChangeListener(p, depNode));
 			rootNode.getChildren().add(depNode);
@@ -114,11 +118,15 @@ public class NavigatorToolController extends BorderPane {
 				}
 				})
 			.forEach(v-> {
-				FileTreeItem empLeaf = new FileTreeItem(v);
 				if (Files.isDirectory(v)) {
+					FileTreeItem empLeaf = new FileTreeItem(v, new ImageView(folderIcon));
 					empLeaf.expandedProperty().addListener(createChangeListener(v, empLeaf));
+					node.getChildren().add(empLeaf);
+				} else {
+					FileTreeItem empLeaf = new FileTreeItem(v, new ImageView(fileIcon));
+					node.getChildren().add(empLeaf);
 				}
-				node.getChildren().add(empLeaf);
+				
 			});
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
