@@ -896,9 +896,7 @@ public class MainController {
     @FXML void showOpenFolderDialog() {
     	Window stage = root.getScene().getWindow();
     	DirectoryChooser dirChooser = new DirectoryChooser();
-    	//TODO: Messages.key
-    	dirChooser.setTitle(Messages.TITLE_OPEN_DIALOG.localize());
-    	//TODO: use own location
+    	dirChooser.setTitle(Messages.TITLE_OPEN_FOLDER_DIALOG.localize());
     	Settings.getSettings().getLastOpenPath().ifPresent(v->dirChooser.setInitialDirectory(v));
     	File selected = dirChooser.showDialog(stage);
     	if (selected!=null) {
